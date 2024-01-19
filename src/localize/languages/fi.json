@@ -1,0 +1,11 @@
+{
+  "version": "Versio",
+  "invalid_configuration": "Virheellinen konfiguraatio",
+  "description": "THL:n Covid-19 tilastot",
+  "name": "THL Covid-19 tilastot",
+  "title": "COVID-19-tilanne",
+  "change": "Muutos",
+  "last_week": "Viime viikko",
+  "two_weeks_ago": "Toissa viikko",
+  "whole_country": "Koko maa"
+}
