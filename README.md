@@ -11,7 +11,7 @@ A Home Assistant Lovelace custom card for tracking Covid-19 statistics by Finnis
 A custom Lovelace card that displays the number of Covid cases last week and two weeks ago, nicely
 visualized in an interactive map of Finland. Requires [thl_covid](https://www.github.com/jesmak/thl_covid) integration as the data source.
 
-![image](https://www.github.com/jesmak/thl-covid-card/thl_covid.png)
+![image](https://github.com/jesmak/thl-covid-card/blob/main/thl_covid.png?raw=true)
 
 ## Support
 
