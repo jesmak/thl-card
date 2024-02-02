@@ -96,7 +96,6 @@ export class THLCovidCard extends LitElement {
   private setSelected(id: string) {
     const areas: Area[] = this.hass.states[this.config.entity].attributes['values'];
     this.selectedArea = areas.find((item) => item['area_id'] === id) || { area_id: '' };
-    console.log(this.selectedArea, this.wholeFinland);
   }
 
   protected render(): TemplateResult | void {
