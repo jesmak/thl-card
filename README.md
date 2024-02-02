@@ -28,6 +28,12 @@ Hey dude! Help me out for a couple of :beers: or a :coffee:!
 
 ## How to install
 
+### With HACS
+
+1. Add this repository to HACS custom repositories
+2. Search for THL Covid card in HACS and install with type Lovelace
+3. Refresh your browser
+
 ### Manually
 
 1. Download thl-covid-card.js from latest release and copy it to config/www folder on your Home Assistant installation.
