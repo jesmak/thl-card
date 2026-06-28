@@ -69,7 +69,7 @@ export class THLCard extends LitElement {
 
     if (area === undefined) {
       return 'var(--primary-text-color)';
-    } else if (area['amount_last_week'] === 0) {
+    } else if (area['change_percentage'] === 0 && area['amount_last_week'] === 0) {
       return '#6495ED';
     } else if (area['change_percentage'] < -40) {
       return '#0DAD4B';
