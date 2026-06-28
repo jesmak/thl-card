@@ -33,7 +33,7 @@ const plugins = [
 
 export default [
   {
-    input: 'src/thl-covid-card.ts',
+    input: 'src/thl-card.ts',
     output: {
       dir: 'dist',
       format: 'es',
