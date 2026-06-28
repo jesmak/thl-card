@@ -1,6 +1,6 @@
 import { LovelaceCardConfig } from 'custom-card-helpers';
 
-export interface THLCovidCardConfig extends LovelaceCardConfig {
+export interface THLCardConfig extends LovelaceCardConfig {
   type: string;
   entity: string;
 }

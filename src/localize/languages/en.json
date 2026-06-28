@@ -1,9 +1,8 @@
 {
   "version": "Version",
   "invalid_configuration": "Invalid configuration",
-  "description": "THL's Covid-19 stats from Finland",
-  "name": "THL Covid-19 stats",
-  "title": "COVID-19 stats",
+  "description": "THL's disease statistics from Finland",
+  "name": "THL statistics",
   "change": "Change",
   "last_week": "Last week",
   "two_weeks_ago": "Two weeks ago",

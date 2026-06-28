@@ -1,7 +1,7 @@
 {
-  "name": "thl-covid-card",
-  "version": "1.0.1",
-  "description": "Lovelace card for tracking THL Covid stats",
+  "name": "thl-card",
+  "version": "1.0.2",
+  "description": "Lovelace card for tracking THL disease stats",
   "keywords": [
     "home-assistant",
     "homeassistant",
@@ -9,11 +9,12 @@
     "automation",
     "lovelace",
     "custom-cards",
-    "covid"
+    "disease",
+    "thl"
   ],
   "type": "module",
-  "module": "thl-covid-card.js",
-  "repository": "git@github.com:jesmak/thl-covid-card.git",
+  "module": "thl-card.js",
+  "repository": "git@github.com:jesmak/thl-card.git",
   "author": "Jesse Mäkinen <jesse.j.makinen@gmail.com>",
   "license": "MIT",
   "dependencies": {
