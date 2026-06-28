@@ -1,6 +1,6 @@
 {
   "name": "thl-card",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Lovelace card for tracking THL disease stats",
   "keywords": [
     "home-assistant",
