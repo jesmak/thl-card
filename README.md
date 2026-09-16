@@ -41,15 +41,27 @@ Hey dude! Help me out for a couple of :beers: or a :coffee:!
 
 ## Options
 
-| Name   | Type   | Requirement  | Description                             | Default |
-| ------ | ------ | ------------ | --------------------------------------- | ------- |
-| type   | string | **Required** | `custom:thl-card`                       |         |
-| entity | string | **Required** | A disease sensor of the thl integration |         |
+The card has a visual editor: add it from the card picker and choose the disease. The options can also be written by
+hand.
+
+| Name        | Type   | Requirement  | Description                             | Default          |
+| ----------- | ------ | ------------ | --------------------------------------- | ---------------- |
+| `type`      | string | **Required** | `custom:thl-card`                       |                  |
+| `entity`    | string | **Required** | A disease sensor of the thl integration |                  |
+| `map_width` | number | Optional     | A fixed width for the map, in pixels    | follows the card |
 
 ```yaml
 type: custom:thl-card
 entity: sensor.thl_influenssa
 ```
+
+## The size of the card
+
+The card is laid out the same way at every width: the disease at the top, the map below it, and one set of figures
+under the map. The map grows with the card up to a point, and the shapes and the numbers written on them scale
+together. The card asks for the full width of a section and is not made narrower than half of one.
+
+Set `map_width` to fix the map at one size whatever the card does.
 
 ## The colours
 
@@ -65,6 +77,8 @@ A county is coloured by how its case numbers changed from the week before.
 | Red         | Cases rose by more than 40 %                         |
 
 A county the sensor carries no numbers for is left the colour of the text.
+
+Clicking a county shows its own figures under the map; clicking it again goes back to the whole country.
 
 ## Development
 

@@ -7,5 +7,9 @@
   "whole_country": "Whole country",
   "last_week": "Last week",
   "two_weeks_ago": "Two weeks ago",
-  "change": "Change"
+  "change": "Change",
+  "entity": "Disease",
+  "entity_helper": "A disease sensor of the thl integration.",
+  "map_width": "Map width",
+  "map_width_helper": "Leave empty and the map follows the width of the card."
 }

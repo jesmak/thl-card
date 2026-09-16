@@ -646,10 +646,6 @@ function fillColor(area) {
   return STEADY;
 }
 
-// src/const.ts
-var CARD_VERSION = "2.0.0";
-var WHOLE_COUNTRY = "finland";
-
 // src/localize/languages/en.json
 var en_default = {
   name: "THL statistics",
@@ -660,7 +656,11 @@ var en_default = {
   whole_country: "Whole country",
   last_week: "Last week",
   two_weeks_ago: "Two weeks ago",
-  change: "Change"
+  change: "Change",
+  entity: "Disease",
+  entity_helper: "A disease sensor of the thl integration.",
+  map_width: "Map width",
+  map_width_helper: "Leave empty and the map follows the width of the card."
 };
 
 // src/localize/languages/fi.json
@@ -673,7 +673,11 @@ var fi_default = {
   whole_country: "Koko maa",
   last_week: "Viime viikko",
   two_weeks_ago: "Toissa viikko",
-  change: "Muutos"
+  change: "Muutos",
+  entity: "Tauti",
+  entity_helper: "thl-integraation taudin sensori.",
+  map_width: "Kartan leveys",
+  map_width_helper: "J\xE4t\xE4 tyhj\xE4ksi, niin kartta seuraa kortin leveytt\xE4."
 };
 
 // src/localize/localize.ts
@@ -691,44 +695,76 @@ function browserLanguage() {
   return document.documentElement.lang || navigator.language || "en";
 }
 
+// src/editor.ts
+var SCHEMA = [
+  {
+    name: "entity",
+    required: true,
+    selector: { entity: { domain: "sensor", integration: "thl" } }
+  },
+  {
+    name: "map_width",
+    selector: { number: { min: 120, max: 600, step: 5, unit_of_measurement: "px", mode: "box" } }
+  }
+];
+var ThlCardEditor = class extends i4 {
+  constructor() {
+    super(...arguments);
+    this.config = { type: "custom:thl-card", entity: "" };
+  }
+  setConfig(config) {
+    this.config = { ...config };
+  }
+  render() {
+    if (!this.hass) {
+      return A;
+    }
+    return b2`
+      <ha-form
+        .hass=${this.hass}
+        .data=${this.config}
+        .schema=${SCHEMA}
+        .computeLabel=${(entry) => this.text(entry.name)}
+        .computeHelper=${(entry) => this.helper(entry.name)}
+        @value-changed=${this.valueChanged}
+      ></ha-form>
+    `;
+  }
+  valueChanged(event) {
+    const config = { ...event.detail.value };
+    if (config.map_width === void 0 || config.map_width === null || String(config.map_width) === "") {
+      delete config.map_width;
+    }
+    this.dispatchEvent(
+      new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true })
+    );
+  }
+  text(key) {
+    return translate(this.language(), key);
+  }
+  helper(key) {
+    const helper = translate(this.language(), `${key}_helper`);
+    return helper === `${key}_helper` ? void 0 : helper;
+  }
+  language() {
+    return this.hass?.locale?.language ?? this.hass?.language ?? browserLanguage();
+  }
+};
+__decorateClass([
+  n4({ attribute: false })
+], ThlCardEditor.prototype, "hass", 2);
+__decorateClass([
+  r5()
+], ThlCardEditor.prototype, "config", 2);
+ThlCardEditor = __decorateClass([
+  t3("thl-card-editor")
+], ThlCardEditor);
+
+// src/const.ts
+var CARD_VERSION = "2.0.0";
+var WHOLE_COUNTRY = "finland";
+
 // src/logos.ts
-var THL_LOGO = b2`
-  <svg
-            version="1.1"
-            id="Layer_1"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-            x="0px"
-            y="0px"
-            viewBox="0 0 80 28.6"
-            style="enable-background:new 0 0 80 28.6;"
-            xml:space="preserve"
-            class="thl-logo"
-          >
-            <path
-              fill="#606060"
-              d="M43.5,13.6h3.8V9.2h-3.8V6.9c0-1.2-0.9-2.1-2.1-2.2c0,0-0.1,0-0.1,0h-3.2v4.5h-2.2v4.4h2.2v6.2
-	c0,5.6,4.9,6.3,7.6,6.3c0.5,0,1,0,1.6-0.1v-4.9c0,0-0.3,0-0.8,0c-1.1,0-3-0.3-3-2.1L43.5,13.6z M64.7,26h4.6v-4.7h-0.9
-	c-0.6,0-1.1-0.5-1.1-1.1c0,0,0,0,0,0v-5c0-4.7-2.3-6.3-5.8-6.3c-2.1-0.1-4,0.9-5.2,2.6V4.9c0-1.2-0.9-2.1-2.1-2.2c0,0-0.1,0-0.1,0
-	H51V26h5.4v-7.4c0-0.7,0.1-1.5,0.3-2.2c0.4-1.5,1.8-2.5,3.4-2.5c1.3,0,1.9,0.7,1.9,2.2v7.1c-0.1,1.4,1,2.6,2.4,2.7
-	C64.4,26,64.6,26,64.7,26 M80,26v-4.7h-0.8c-0.6,0-1.1-0.4-1.2-1.1c0,0,0,0,0-0.1V6.9c0-1.2-0.9-2.1-2.1-2.2c0,0-0.1,0-0.1,0h-3.2
-	v18.5c-0.1,1.4,1,2.6,2.4,2.7c0.1,0,0.3,0,0.4,0H80z"
-            />
-            <path
-              fill="#7bc143"
-              d="M28.6,14.3c0,7.9-6.4,14.3-14.3,14.3C6.4,28.6,0,22.2,0,14.3S6.4,0,14.3,0c0,0,0,0,0,0
-	C22.2,0,28.6,6.4,28.6,14.3"
-            />
-            <path
-              fill="#ffffff"
-              d="M15.5,13.9c1.3-2.4,2.9-4,4.6-4.6c2.5-0.8,4,0.7,5.2,1.4c-0.6,1.2-0.9,3.3-3.4,4.2C20.1,15.4,17.9,15,15.5,13.9
-	 M11.4,7.2c0-2.6,1.9-3.6,2.9-4.5c1,0.9,2.9,1.8,2.9,4.5c0,1.9-1,3.8-2.9,5.8C12.4,11,11.4,9.1,11.4,7.2 M13.1,13.9
-	c-2.5,1.2-4.6,1.6-6.4,1c-2.5-0.8-2.8-3-3.4-4.2c1.2-0.6,2.6-2.2,5.2-1.4C10.2,9.9,11.8,11.5,13.1,13.9 M13.5,15.3
-	c0.3,2.7,0,4.9-1.1,6.4c-1.6,2.2-3.7,1.8-5,1.9c-0.2-1.3-1.3-3.2,0.3-5.3C8.9,16.7,10.8,15.8,13.5,15.3 M21,23.6
-	c-1.3-0.2-3.4,0.2-5-1.9c-1.1-1.5-1.4-3.7-1.1-6.4c2.7,0.5,4.7,1.5,5.8,3C22.3,20.4,21.2,22.3,21,23.6"
-            />
-          </svg>
-`;
 var DISEASE_LOGO = b2`
   <svg
               class="disease-logo"
@@ -1071,11 +1107,13 @@ var OUTLINES = [
     layer: "over"
   }
 ];
+
+// src/map/labels.ts
 var COUNTY_LABELS = [
   { id: "ita-uudenmaan_hyvinvointialue", bottom: 15, left: 125 },
-  { id: "keski-uudenmaan_hyvinvointialue", bottom: 30, left: 105 },
-  { id: "lansi-uudenmaan_hyvinvointialue", bottom: 10, left: 80 },
-  { id: "vantaan_ja_keravan_hyvinvointialue", bottom: 20, left: 105 },
+  { id: "keski-uudenmaan_hyvinvointialue", bottom: 27, left: 105 },
+  { id: "lansi-uudenmaan_hyvinvointialue", bottom: 5, left: 80 },
+  { id: "vantaan_ja_keravan_hyvinvointialue", bottom: 14, left: 105 },
   { id: "varsinais-suomen_hyvinvointialue", bottom: 25, left: 60 },
   { id: "satakunnan_hyvinvointialue", bottom: 60, left: 50 },
   { id: "kanta-hameen_hyvinvointialue", bottom: 40, left: 90 },
@@ -1088,7 +1126,7 @@ var COUNTY_LABELS = [
   { id: "pohjois-karjalan_hyvinvointialue", bottom: 120, left: 200 },
   { id: "keski-suomen_hyvinvointialue", bottom: 105, left: 115 },
   { id: "etela-pohjanmaan_hyvinvointialue", bottom: 115, left: 70 },
-  { id: "pohjanmaan_hyvinvointialue", bottom: 135, left: 50 },
+  { id: "pohjanmaan_hyvinvointialue", bottom: 135, left: 55 },
   { id: "keski-pohjanmaan_hyvinvointialue", bottom: 150, left: 95 },
   { id: "pohjois-pohjanmaan_hyvinvointialue", bottom: 180, left: 115 },
   { id: "kainuun_hyvinvointialue", bottom: 180, left: 170 },
@@ -1109,9 +1147,14 @@ registry.customCards = registry.customCards ?? [];
 registry.customCards.push({
   type: "thl-card",
   name: translate(browserLanguage(), "name"),
-  description: translate(browserLanguage(), "description")
+  description: translate(browserLanguage(), "description"),
+  documentationURL: "https://github.com/jesmak/thl-card",
+  preview: true
 });
 var ThlCard = class extends i4 {
+  static getConfigElement() {
+    return document.createElement("thl-card-editor");
+  }
   /** Offers the first disease of the thl integration when the card is added from the picker. */
   static getStubConfig(hass) {
     const entity = Object.keys(hass?.states ?? {}).find((id) => id.startsWith("sensor.thl_"));
@@ -1125,6 +1168,10 @@ var ThlCard = class extends i4 {
   }
   getCardSize() {
     return 8;
+  }
+  /** In a sections view the card is drawn full width, and never squeezed below half a section. */
+  getGridOptions() {
+    return { columns: 12, rows: "auto", min_columns: 6 };
   }
   shouldUpdate(changed) {
     if (changed.has("config") || changed.has("selected") || !this.config) {
@@ -1146,32 +1193,38 @@ var ThlCard = class extends i4 {
     }
     const areas = entity.attributes.values ?? [];
     const selected = this.selected === void 0 ? void 0 : findArea(areas, this.selected);
+    const whole = findArea(areas, WHOLE_COUNTRY);
     return b2`
       <ha-card>
-        ${this.map(areas)}
-        <div class="right-pane">
-          ${THL_LOGO}
-          <div class="disease-logo-container">
+        <div class="card">
+          <div class="disease">
             ${DISEASE_LOGO}
-            <span>${entity.attributes.disease_name}</span>
+            <span class="disease-name">${entity.attributes.disease_name}</span>
           </div>
-          ${this.stats(this.text("whole_country"), findArea(areas, WHOLE_COUNTRY))}
-          ${selected === void 0 ? A : this.stats(selected.name, selected)}
+          ${this.map(areas)}
+          <div class="figures">
+            ${this.stats(selected?.name ?? this.text("whole_country"), selected ?? whole)}
+          </div>
         </div>
       </ha-card>
     `;
   }
   map(areas) {
+    const width = this.config?.map_width;
+    const size = width === void 0 ? `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT};` : `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT}; width: ${width}px; max-width: 100%;`;
     return b2`
-      <div class="map">
+      <div class="map" style="${size}">
         ${COUNTY_LABELS.map(
       (label) => b2`
-            <span class="amount" style="bottom: ${label.bottom}px; left: ${label.left}px;">
+            <span
+              class="amount"
+              style="bottom: ${(label.bottom / MAP_HEIGHT * 100).toFixed(3)}%; left: ${(label.left / MAP_WIDTH * 100).toFixed(3)}%;"
+            >
               ${caseCount(areas, label.id)}
             </span>
           `
     )}
-        <svg width="${MAP_WIDTH}" height="${MAP_HEIGHT}" viewBox="${MAP_VIEW_BOX}" version="1.1">
+        <svg viewBox="${MAP_VIEW_BOX}" version="1.1" preserveAspectRatio="xMidYMid meet">
           <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
             ${OUTLINES.filter((outline) => outline.layer === "under").map((outline) => this.outline(outline))}
             ${COUNTIES.map((county) => this.county(county, areas))}
@@ -1215,7 +1268,7 @@ var ThlCard = class extends i4 {
     return b2`<ha-card><div class="message">${text}</div></ha-card>`;
   }
   select(id) {
-    this.selected = id;
+    this.selected = this.selected === id ? void 0 : id;
   }
   text(key, replacements) {
     const language = this.hass?.locale?.language ?? this.hass?.language ?? browserLanguage();
@@ -1223,8 +1276,62 @@ var ThlCard = class extends i4 {
   }
   static get styles() {
     return i`
+      :host {
+        display: block;
+      }
+
+      .card {
+        container-type: inline-size;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        box-sizing: border-box;
+      }
+
+      /* The disease is named at the top, on one line whatever width the card has. */
+      .disease {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* The drawing and the gap are sized from this, so the whole row keeps
+           its proportions at every width. */
+        font-size: clamp(11px, 5.5cqw, 18px);
+        gap: 0.5em;
+        max-width: 100%;
+        max-height: 48px;
+      }
+
+      .disease-logo {
+        flex: 0 0 auto;
+        width: 1.7em;
+        height: 1.7em;
+      }
+
+      .disease-name {
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 600;
+      }
+
       .map {
-        display: inline-block;
+        position: relative;
+        container-type: inline-size;
+        /* Grows with the card, but only so far: taller than this and it swamps the page. */
+        width: min(100%, 300px);
+      }
+
+      .map svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .map path {
+        cursor: pointer;
       }
 
       .map path:hover {
@@ -1239,51 +1346,32 @@ var ThlCard = class extends i4 {
         opacity: 0.5;
       }
 
-      .map path {
-        cursor: pointer;
-      }
-
       .amount {
         color: var(--primary-text-color);
-        font-size: 9px;
         position: absolute;
+        /* The numbers lie on top of the shapes, so let the clicks through to the county beneath. */
+        pointer-events: none;
         text-shadow: 1px 1px 2px black;
+        /* 9px when the map is its original 235px wide, and in proportion after that. */
+        font-size: 9px;
+        font-size: 3.83cqw;
       }
 
-      .right-pane {
-        display: inline-block;
-        vertical-align: top;
-        width: calc(100% - 240px);
-        margin-top: 50px;
-      }
-
-      .thl-logo {
+      .figures {
         display: flex;
-        height: 40px;
-      }
-
-      .disease-logo-container {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        padding-left: 10px;
-      }
-
-      .disease-logo {
-        height: 50px;
-        width: 50px;
+        justify-content: center;
+        width: 100%;
       }
 
       .stats-container {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        padding-left: 10px;
+        align-items: center;
+        text-align: center;
       }
 
       .stats-title {
         font-weight: 600;
-        margin-top: 10px;
       }
 
       .stats {
