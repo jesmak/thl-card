@@ -1,10 +1,11 @@
 {
-  "version": "Versio",
-  "invalid_configuration": "Virheellinen konfiguraatio",
-  "description": "THL:n tautitilastot",
   "name": "THL tautitilastot",
-  "change": "Muutos",
+  "description": "THL:n tautitilastot",
+  "invalid_configuration": "Aseta entiteetiksi thl-integraation tauti.",
+  "entity_not_found": "Entiteettiä {entity} ei ole.",
+  "unavailable": "Tautien lukumäärät eivät ole saatavilla.",
+  "whole_country": "Koko maa",
   "last_week": "Viime viikko",
   "two_weeks_ago": "Toissa viikko",
-  "whole_country": "Koko maa"
+  "change": "Muutos"
 }
