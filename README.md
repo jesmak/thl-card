@@ -1,11 +1,16 @@
-# THL card by [@jesmak](https://www.github.com/jesmak)
+# THL card
 
-A Home Assistant dashboard card that draws the disease statistics of the Finnish Institute for Health and Welfare
-(THL) on a map of Finland.
+Home Assistant dashboard card that draws THL's weekly disease numbers on a map of Finland.
 
 [![GitHub Release][releases-shield]][releases]
 [![License][license-shield]](LICENSE)
 [![GitHub Activity][commits-shield]][commits]
+
+## Support
+
+Hey dude! Help me out for a couple of :beers: or a :coffee:!
+
+[![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/jesmak)
 
 ## What is it?
 
@@ -16,12 +21,6 @@ figures beside the map.
 The numbers come from the [thl](https://www.github.com/jesmak/thl) integration, which is required.
 
 ![The card](docs/images/card.png)
-
-## Support
-
-Hey dude! Help me out for a couple of :beers: or a :coffee:!
-
-[![coffee](https://www.buymeacoffee.com/assets/img/custom_images/black_img.png)](https://www.buymeacoffee.com/jesmak)
 
 ## How to install
 
