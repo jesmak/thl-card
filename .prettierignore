@@ -1,0 +1,6 @@
+dist/
+node_modules/
+package-lock.json
+# Both hold drawings lifted from the original card; their markup is data, not code to reflow.
+src/map/counties.ts
+src/logos.ts

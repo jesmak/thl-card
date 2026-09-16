@@ -1,10 +1,11 @@
 {
-  "version": "Version",
-  "invalid_configuration": "Invalid configuration",
-  "description": "THL's disease statistics from Finland",
   "name": "THL statistics",
-  "change": "Change",
+  "description": "THL's disease statistics from Finland",
+  "invalid_configuration": "Set the entity of a disease from the thl integration.",
+  "entity_not_found": "There is no entity {entity}.",
+  "unavailable": "The disease numbers aren't available.",
+  "whole_country": "Whole country",
   "last_week": "Last week",
   "two_weeks_ago": "Two weeks ago",
-  "whole_country": "Whole country"
+  "change": "Change"
 }
