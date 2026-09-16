@@ -7,5 +7,9 @@
   "whole_country": "Koko maa",
   "last_week": "Viime viikko",
   "two_weeks_ago": "Toissa viikko",
-  "change": "Muutos"
+  "change": "Muutos",
+  "entity": "Tauti",
+  "entity_helper": "thl-integraation taudin sensori.",
+  "map_width": "Kartan leveys",
+  "map_width_helper": "Jätä tyhjäksi, niin kartta seuraa kortin leveyttä."
 }

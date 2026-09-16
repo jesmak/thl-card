@@ -129,14 +129,81 @@ describe('the map', () => {
   });
 });
 
-describe('the drawings', () => {
-  it('draws the THL logo', async () => {
+describe('the size of the card', () => {
+  it('lets the map scale with the card instead of fixing it in pixels', async () => {
     const root = shadow(await card(hass()));
-    const paths = [...root.querySelectorAll('.thl-logo path')];
-    expect(paths).toHaveLength(3);
-    expect(paths.map((path) => path.getAttribute('fill'))).toEqual(['#606060', '#7bc143', '#ffffff']);
+    const svg = root.querySelector('.map svg') as SVGElement;
+    expect(svg.getAttribute('width')).toBeNull();
+    expect(svg.getAttribute('height')).toBeNull();
+    expect(svg.getAttribute('viewBox')).toBe('0 0 1667.6923 2897.9419');
+    expect((root.querySelector('.map') as HTMLElement).getAttribute('style')).toContain(
+      'aspect-ratio: 235 / 409',
+    );
   });
 
+  it('places the numbers in proportion, so they scale with the map', async () => {
+    const root = shadow(await card(hass()));
+    const styles = [...root.querySelectorAll('.amount')].map((span) => span.getAttribute('style') ?? '');
+    expect(styles.every((style) => style.includes('%'))).toBe(true);
+    expect(styles.some((style) => style.includes('px'))).toBe(false);
+    // Lapland sat at 300px from the bottom of a 409px map, and 140px from its left edge.
+    expect(styles).toContain('bottom: 73.350%; left: 59.574%;');
+  });
+
+  it('fixes the map at the width the configuration asks for', async () => {
+    const root = shadow(await card(hass(), { entity: ENTITY, map_width: 320 }));
+    const style = (root.querySelector('.map') as HTMLElement).getAttribute('style') ?? '';
+    expect(style).toContain('width: 320px');
+    expect(style).toContain('max-width: 100%');
+  });
+
+  it('offers a visual editor', async () => {
+    const { ThlCard } = await import('../src/thl-card');
+    const element = ThlCard.getConfigElement();
+    expect(element.tagName.toLowerCase()).toBe('thl-card-editor');
+  });
+});
+
+describe('the shape of the card', () => {
+  it('is never squeezed below half a section', () => {
+    const element = document.createElement('thl-card') as ThlCard;
+    expect(element.getGridOptions()).toEqual({ columns: 12, rows: 'auto', min_columns: 6 });
+  });
+
+  it('groups the figures, so they can sit in a row or a column', async () => {
+    const root = shadow(await card(hass()));
+    expect(root.querySelector('.figures')).not.toBeNull();
+    expect(root.querySelectorAll('.figures .stats-container')).toHaveLength(1);
+  });
+
+  it('names the disease above the map', async () => {
+    const root = shadow(await card(hass()));
+    const children = [...(root.querySelector('.card')?.children ?? [])].map((child) => child.className);
+    expect(children).toEqual(['disease', 'map', 'figures']);
+  });
+
+  it('keeps the disease name with its drawing', async () => {
+    const root = shadow(await card(hass()));
+    const disease = root.querySelector('.disease');
+    expect(disease?.querySelector('.disease-logo')).not.toBeNull();
+    expect(disease?.querySelector('.disease-name')?.textContent?.trim()).toBe('Influenssa');
+  });
+
+  it('keeps the disease on one line and the map within bounds', async () => {
+    const { ThlCard } = await import('../src/thl-card');
+    const styles = String((ThlCard as unknown as { styles: { cssText: string } }).styles.cssText);
+    expect(styles).toContain('white-space: nowrap');
+    // The drawing and the gap are tied to the name's size, not scaled on their own.
+    expect(styles).toContain('width: 1.7em');
+    expect(styles).toContain('gap: 0.5em');
+    // A number must never swallow the click meant for the county under it.
+    expect(styles).toContain('pointer-events: none');
+    expect(styles).toContain('width: min(100%, 300px)');
+    expect(styles).not.toContain('@container card');
+  });
+});
+
+describe('the drawings', () => {
   it('draws the virus', async () => {
     const root = shadow(await card(hass()));
     expect(root.querySelectorAll('.disease-logo path')).toHaveLength(35);
@@ -158,18 +225,32 @@ describe('the figures beside the map', () => {
     expect(root.textContent).toContain('Influenssa');
   });
 
-  it('show a county when it is clicked', async () => {
+  it('show the chosen county instead of the whole country', async () => {
     const element = await card(hass());
     const root = shadow(element);
     expect(root.querySelectorAll('.stats-container')).toHaveLength(1);
+    expect(root.querySelector('.stats-title')?.textContent).toContain('Koko maa');
 
     (root.querySelector('#kainuun_hyvinvointialue') as SVGElement).dispatchEvent(new Event('click'));
     await element.updateComplete;
 
-    const panes = root.querySelectorAll('.stats-container');
-    expect(panes).toHaveLength(2);
-    expect(panes[1].textContent).toContain('Kainuun hyvinvointialue');
-    expect(panes[1].textContent).toContain('Viime viikko: 0');
+    expect(root.querySelectorAll('.stats-container')).toHaveLength(1);
+    expect(root.querySelector('.stats-title')?.textContent).toContain('Kainuun hyvinvointialue');
+    expect(root.querySelector('.stats-container')?.textContent).toContain('Viime viikko: 0');
+  });
+
+  it('go back to the whole country when the same county is clicked again', async () => {
+    const element = await card(hass());
+    const root = shadow(element);
+    const county = root.querySelector('#kainuun_hyvinvointialue') as SVGElement;
+
+    county.dispatchEvent(new Event('click'));
+    await element.updateComplete;
+    county.dispatchEvent(new Event('click'));
+    await element.updateComplete;
+
+    expect(root.querySelectorAll('.stats-container')).toHaveLength(1);
+    expect(root.querySelector('.stats-title')?.textContent).toContain('Koko maa');
   });
 
   it('leave out the change when THL has not published the week before', async () => {

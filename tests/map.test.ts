@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { COUNTIES, COUNTY_LABELS, OUTLINES } from '../src/map/counties';
+import { COUNTIES, OUTLINES } from '../src/map/counties';
+import { COUNTY_LABELS } from '../src/map/labels';
 
 /** The areas the thl integration publishes; the map has to match them exactly. */
 const AREA_IDS = [

@@ -10,20 +10,14 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 
 import { caseCount, fillColor, findArea } from './areas';
+import './editor';
 import { CARD_VERSION, WHOLE_COUNTRY } from './const';
 import type { HomeAssistant } from './hass';
 import { browserLanguage, translate } from './localize/localize';
-import { DISEASE_LOGO, THL_LOGO } from './logos';
-import {
-  COUNTIES,
-  COUNTY_LABELS,
-  MAP_GROUP_TRANSFORM,
-  MAP_HEIGHT,
-  MAP_VIEW_BOX,
-  MAP_WIDTH,
-  OUTLINES,
-} from './map/counties';
+import { DISEASE_LOGO } from './logos';
+import { COUNTIES, MAP_GROUP_TRANSFORM, MAP_HEIGHT, MAP_VIEW_BOX, MAP_WIDTH, OUTLINES } from './map/counties';
 import type { CountyShape, Outline } from './map/counties';
+import { COUNTY_LABELS } from './map/labels';
 import type { Area, ThlCardConfig } from './types';
 
 console.info(
@@ -36,6 +30,8 @@ interface CardRegistration {
   type: string;
   name: string;
   description: string;
+  documentationURL?: string;
+  preview?: boolean;
 }
 
 const registry = window as unknown as { customCards?: CardRegistration[] };
@@ -44,6 +40,8 @@ registry.customCards.push({
   type: 'thl-card',
   name: translate(browserLanguage(), 'name'),
   description: translate(browserLanguage(), 'description'),
+  documentationURL: 'https://github.com/jesmak/thl-card',
+  preview: true,
 });
 
 @customElement('thl-card')
@@ -51,6 +49,10 @@ export class ThlCard extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
   @state() private config?: ThlCardConfig;
   @state() private selected?: string;
+
+  public static getConfigElement(): HTMLElement {
+    return document.createElement('thl-card-editor');
+  }
 
   /** Offers the first disease of the thl integration when the card is added from the picker. */
   public static getStubConfig(hass?: HomeAssistant): Record<string, unknown> {
@@ -67,6 +69,11 @@ export class ThlCard extends LitElement {
 
   public getCardSize(): number {
     return 8;
+  }
+
+  /** In a sections view the card is drawn full width, and never squeezed below half a section. */
+  public getGridOptions(): Record<string, unknown> {
+    return { columns: 12, rows: 'auto', min_columns: 6 };
   }
 
   protected shouldUpdate(changed: PropertyValues): boolean {
@@ -93,34 +100,47 @@ export class ThlCard extends LitElement {
 
     const areas = (entity.attributes.values as Area[] | undefined) ?? [];
     const selected = this.selected === undefined ? undefined : findArea(areas, this.selected);
+    const whole = findArea(areas, WHOLE_COUNTRY);
 
     return html`
       <ha-card>
-        ${this.map(areas)}
-        <div class="right-pane">
-          ${THL_LOGO}
-          <div class="disease-logo-container">
+        <div class="card">
+          <div class="disease">
             ${DISEASE_LOGO}
-            <span>${entity.attributes.disease_name as string}</span>
+            <span class="disease-name">${entity.attributes.disease_name as string}</span>
           </div>
-          ${this.stats(this.text('whole_country'), findArea(areas, WHOLE_COUNTRY))}
-          ${selected === undefined ? nothing : this.stats(selected.name, selected)}
+          ${this.map(areas)}
+          <div class="figures">
+            ${this.stats(selected?.name ?? this.text('whole_country'), selected ?? whole)}
+          </div>
         </div>
       </ha-card>
     `;
   }
 
   private map(areas: Area[]): TemplateResult {
+    const width = this.config?.map_width;
+    const size =
+      width === undefined
+        ? `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT};`
+        : `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT}; width: ${width}px; max-width: 100%;`;
+
     return html`
-      <div class="map">
+      <div class="map" style="${size}">
         ${COUNTY_LABELS.map(
           (label) => html`
-            <span class="amount" style="bottom: ${label.bottom}px; left: ${label.left}px;">
+            <span
+              class="amount"
+              style="bottom: ${((label.bottom / MAP_HEIGHT) * 100).toFixed(3)}%; left: ${(
+                (label.left / MAP_WIDTH) *
+                100
+              ).toFixed(3)}%;"
+            >
               ${caseCount(areas, label.id)}
             </span>
           `,
         )}
-        <svg width="${MAP_WIDTH}" height="${MAP_HEIGHT}" viewBox="${MAP_VIEW_BOX}" version="1.1">
+        <svg viewBox="${MAP_VIEW_BOX}" version="1.1" preserveAspectRatio="xMidYMid meet">
           <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
             ${OUTLINES.filter((outline) => outline.layer === 'under').map((outline) => this.outline(outline))}
             ${COUNTIES.map((county) => this.county(county, areas))}
@@ -177,7 +197,8 @@ export class ThlCard extends LitElement {
   }
 
   private select(id: string): void {
-    this.selected = id;
+    // Clicking the county that is already chosen goes back to the whole country.
+    this.selected = this.selected === id ? undefined : id;
   }
 
   private text(key: string, replacements?: Record<string, string>): string {
@@ -187,8 +208,62 @@ export class ThlCard extends LitElement {
 
   static get styles(): CSSResultGroup {
     return css`
+      :host {
+        display: block;
+      }
+
+      .card {
+        container-type: inline-size;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        box-sizing: border-box;
+      }
+
+      /* The disease is named at the top, on one line whatever width the card has. */
+      .disease {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* The drawing and the gap are sized from this, so the whole row keeps
+           its proportions at every width. */
+        font-size: clamp(11px, 5.5cqw, 18px);
+        gap: 0.5em;
+        max-width: 100%;
+        max-height: 48px;
+      }
+
+      .disease-logo {
+        flex: 0 0 auto;
+        width: 1.7em;
+        height: 1.7em;
+      }
+
+      .disease-name {
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 600;
+      }
+
       .map {
-        display: inline-block;
+        position: relative;
+        container-type: inline-size;
+        /* Grows with the card, but only so far: taller than this and it swamps the page. */
+        width: min(100%, 300px);
+      }
+
+      .map svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .map path {
+        cursor: pointer;
       }
 
       .map path:hover {
@@ -203,51 +278,32 @@ export class ThlCard extends LitElement {
         opacity: 0.5;
       }
 
-      .map path {
-        cursor: pointer;
-      }
-
       .amount {
         color: var(--primary-text-color);
-        font-size: 9px;
         position: absolute;
+        /* The numbers lie on top of the shapes, so let the clicks through to the county beneath. */
+        pointer-events: none;
         text-shadow: 1px 1px 2px black;
+        /* 9px when the map is its original 235px wide, and in proportion after that. */
+        font-size: 9px;
+        font-size: 3.83cqw;
       }
 
-      .right-pane {
-        display: inline-block;
-        vertical-align: top;
-        width: calc(100% - 240px);
-        margin-top: 50px;
-      }
-
-      .thl-logo {
+      .figures {
         display: flex;
-        height: 40px;
-      }
-
-      .disease-logo-container {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        padding-left: 10px;
-      }
-
-      .disease-logo {
-        height: 50px;
-        width: 50px;
+        justify-content: center;
+        width: 100%;
       }
 
       .stats-container {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
-        padding-left: 10px;
+        align-items: center;
+        text-align: center;
       }
 
       .stats-title {
         font-weight: 600;
-        margin-top: 10px;
       }
 
       .stats {

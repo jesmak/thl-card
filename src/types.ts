@@ -2,6 +2,8 @@ import type { LovelaceCardConfig } from './hass';
 
 export interface ThlCardConfig extends LovelaceCardConfig {
   entity: string;
+  /** A fixed width for the map in pixels. Left out, the map follows the width of the card. */
+  map_width?: number;
 }
 
 /** One wellbeing services county, as the thl integration writes it into the sensor's `values`. */
