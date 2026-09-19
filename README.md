@@ -14,9 +14,9 @@ Hey dude! Help me out for a couple of :beers: or a :coffee:!
 
 ## What is it?
 
-A custom card that shows one disease's case numbers for last week and the week before, on an interactive map of the
-wellbeing services counties. Each county is coloured by how much its numbers changed, and clicking one shows its
-figures beside the map.
+A custom card that shows one disease's weekly numbers, or the flu-like illness visits in primary care, on an
+interactive map of the wellbeing services counties. Each county is coloured by how it compares with the whole country,
+and clicking one shows its figures and a trend of its past weeks under the map.
 
 The numbers come from the [thl](https://www.github.com/jesmak/thl) integration, which is required.
 
@@ -43,11 +43,14 @@ The numbers come from the [thl](https://www.github.com/jesmak/thl) integration, 
 The card has a visual editor: add it from the card picker and choose the disease. The options can also be written by
 hand.
 
-| Name        | Type   | Requirement  | Description                             | Default          |
-| ----------- | ------ | ------------ | --------------------------------------- | ---------------- |
-| `type`      | string | **Required** | `custom:thl-card`                       |                  |
-| `entity`    | string | **Required** | A disease sensor of the thl integration |                  |
-| `map_width` | number | Optional     | A fixed width for the map, in pixels    | follows the card |
+| Name           | Type    | Requirement  | Description                                                                                        | Default           |
+| -------------- | ------- | ------------ | -------------------------------------------------------------------------------------------------- | ----------------- |
+| `type`         | string  | **Required** | `custom:thl-card`                                                                                  |                   |
+| `entity`       | string  | **Required** | The whole country's sensor of a disease, or of the flu-like illness visits                         |                   |
+| `color_by`     | string  | Optional     | `level` compares each county with the whole country, `change` with its own week before             | `level`           |
+| `default_area` | string  | Optional     | The `area_id` of a county chosen whenever the card loads, such as `etela-karjalan_hyvinvointialue` | the whole country |
+| `show_trend`   | boolean | Optional     | A line of the chosen area's past six months with its figures                                       | `true`            |
+| `map_width`    | number  | Optional     | A fixed width for the map, in pixels                                                               | follows the card  |
 
 ```yaml
 type: custom:thl-card
@@ -56,15 +59,29 @@ entity: sensor.thl_influenssa
 
 ## The size of the card
 
-The card is laid out the same way at every width: the disease at the top, the map below it, and one set of figures
-under the map. The map grows with the card up to a point, and the shapes and the numbers written on them scale
-together. The card asks for the full width of a section and is not made narrower than half of one.
+A card a whole section wide, which is where it starts, puts the figures beside the map, over the sea west of it, so
+the card isn't taller than it needs to be. A narrower card keeps them under the map. The trend is always under the
+map. The map grows with the card up to a point, and the shapes and the numbers written on them scale together. The
+card is not made narrower than half a section.
 
 Set `map_width` to fix the map at one size whatever the card does.
 
 ## The colours
 
-A county is coloured by how its case numbers changed from the week before.
+By default a county is coloured by its level compared with the whole country: its incidence per 100 000 people for a
+disease, or its share of flu-like illness visits. The level is what makes counties comparable, since a large county
+has more cases simply because more people live there.
+
+| Colour      | What it means                                  |
+| ----------- | ---------------------------------------------- |
+| Blue        | No cases at all                                |
+| Green       | Less than half the whole country's level       |
+| Light green | Less than 0.8 times the whole country's level  |
+| Yellow      | About the same as the whole country            |
+| Orange      | More than 1.25 times the whole country's level |
+| Red         | More than twice the whole country's level      |
+
+With `color_by: change` a county is coloured by how its cases changed from the week before instead:
 
 | Colour      | What it means                                        |
 | ----------- | ---------------------------------------------------- |
@@ -77,7 +94,14 @@ A county is coloured by how its case numbers changed from the week before.
 
 A county the sensor carries no numbers for is left the colour of the text.
 
-Clicking a county shows its own figures under the map; clicking it again goes back to the whole country.
+## The figures and the trend
+
+Under the map are the whole country's figures: last week's cases and incidence, the week before, and the change. For
+the flu-like illness visits they are the share of visits, how many there were, and the share the week before. Clicking
+a county shows its own figures instead; clicking it again goes back to the whole country.
+
+The trend covers the past six months, drawn from the statistics the integration keeps for each area's sensor: the
+incidence when colouring by level, the cases when colouring by change. Pointing at it shows the week and its figure.
 
 ## Development
 

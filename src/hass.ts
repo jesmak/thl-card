@@ -10,6 +10,8 @@ export interface HomeAssistant {
   states: Record<string, HassEntity | undefined>;
   language?: string;
   locale?: { language?: string };
+  /** Home Assistant's websocket API, which the trend reads statistics from. */
+  callWS?<T>(message: Record<string, unknown>): Promise<T>;
 }
 
 export interface LovelaceCardConfig {
