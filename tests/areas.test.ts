@@ -7,6 +7,9 @@ import {
   FALLING,
   FALLING_FAST,
   findArea,
+  isVisits,
+  level,
+  levelColor,
   NO_CASES,
   NO_DATA,
   RISING,
@@ -78,5 +81,44 @@ describe('the colour of a county', () => {
 
   it('is the steady colour when THL has not published the week before', () => {
     expect(fillColor(area({ change_percentage: undefined, amount_two_weeks_ago: undefined }))).toBe(STEADY);
+  });
+});
+
+describe('colouring by level', () => {
+  const whole = area({ area_id: 'finland', incidence_last_week: 2 });
+
+  it.each([
+    [0.5, FALLING_FAST],
+    [1.2, FALLING],
+    [2, STEADY],
+    [2.5, STEADY],
+    [3, RISING],
+    [5, RISING_FAST],
+  ])('a county at %s per 100 000 against the whole country’s 2', (incidence, expected) => {
+    expect(fillColor(area({ incidence_last_week: incidence }), 'level', whole)).toBe(expected);
+  });
+
+  it('leaves a county without cases the colour of no cases', () => {
+    expect(levelColor(area({ incidence_last_week: 0 }), whole)).toBe(NO_CASES);
+    expect(levelColor(area({ incidence_last_week: 0 }), area({ incidence_last_week: 0 }))).toBe(NO_CASES);
+  });
+
+  it('falls back to the change for a sensor without incidence', () => {
+    expect(levelColor(area({ change_percentage: '-100' }), area({ area_id: 'finland' }))).toBe(FALLING_FAST);
+  });
+
+  it('compares the share of flu-like illness visits the same way', () => {
+    const country = area({ area_id: 'finland', share_last_week: 0.01 });
+    expect(levelColor(area({ share_last_week: 0.03 }), country)).toBe(RISING_FAST);
+    expect(levelColor(area({ share_last_week: null }), country)).toBe(NO_DATA);
+  });
+
+  it('knows the flu-like illness visits from a disease', () => {
+    expect(isVisits([area({ area_id: 'finland', share_last_week: 0.01 })])).toBe(true);
+    expect(isVisits([area({ area_id: 'finland', incidence_last_week: 0.3 })])).toBe(false);
+    expect(level(area({ share_last_week: 0.01 }))).toBe(0.01);
+    expect(
+      caseCount([area({ amount_last_week: undefined, visits_last_week: 12 })], 'lapin_hyvinvointialue'),
+    ).toBe(12);
   });
 });

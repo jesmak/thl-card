@@ -606,6 +606,10 @@ function r5(r6) {
 // node_modules/lit-html/directives/if-defined.js
 var o6 = (o7) => o7 ?? A;
 
+// src/const.ts
+var CARD_VERSION = "2.0.0";
+var WHOLE_COUNTRY = "finland";
+
 // src/areas.ts
 var NO_DATA = "var(--primary-text-color)";
 var NO_CASES = "#6495ED";
@@ -618,16 +622,54 @@ function findArea(areas, id) {
   return areas.find((area) => area.area_id === id);
 }
 function caseCount(areas, id) {
-  return findArea(areas, id)?.amount_last_week ?? "";
+  const area = findArea(areas, id);
+  return area?.amount_last_week ?? area?.visits_last_week ?? "";
+}
+function isVisits(areas) {
+  return findArea(areas, WHOLE_COUNTRY)?.share_last_week !== void 0;
+}
+function level(area) {
+  const value = area?.incidence_last_week ?? area?.share_last_week;
+  return value === null || value === void 0 ? void 0 : Number(value);
 }
 function changePercentage(area) {
   return Number(area.change_percentage ?? NaN);
 }
-function fillColor(area) {
+function fillColor(area, colorBy = "change", whole) {
+  return colorBy === "level" ? levelColor(area, whole) : changeColor(area);
+}
+function levelColor(area, whole) {
   if (area === void 0) {
     return NO_DATA;
   }
-  if (area.change_percentage === 0 && area.amount_last_week === 0) {
+  const value = level(area);
+  const national = level(whole);
+  if (value === void 0 || national === void 0) {
+    return area.share_last_week === null ? NO_DATA : changeColor(area);
+  }
+  if (value === 0 || national === 0) {
+    return NO_CASES;
+  }
+  const ratio = value / national;
+  if (ratio < 0.5) {
+    return FALLING_FAST;
+  }
+  if (ratio < 0.8) {
+    return FALLING;
+  }
+  if (ratio > 2) {
+    return RISING_FAST;
+  }
+  if (ratio > 1.25) {
+    return RISING;
+  }
+  return STEADY;
+}
+function changeColor(area) {
+  if (area === void 0) {
+    return NO_DATA;
+  }
+  if (area.change_percentage === 0 && (area.amount_last_week ?? 0) === 0) {
     return NO_CASES;
   }
   const change = changePercentage(area);
@@ -657,10 +699,24 @@ var en_default = {
   last_week: "Last week",
   two_weeks_ago: "Two weeks ago",
   change: "Change",
-  entity: "Disease",
-  entity_helper: "A disease sensor of the thl integration.",
+  entity: "Disease or flu-like illness visits",
+  entity_helper: "The whole country's sensor of a disease, or of the flu-like illness visits, from the thl integration.",
   map_width: "Map width",
-  map_width_helper: "Leave empty and the map follows the width of the card."
+  map_width_helper: "Leave empty and the map follows the width of the card.",
+  incidence: "Incidence",
+  visits: "Visits",
+  trend: "Trend",
+  highest: "highest",
+  color_by: "Colours",
+  color_by_helper: "Level compares each county with the whole country; change with the county's own week before.",
+  color_by_level: "Level compared with the whole country",
+  color_by_change: "Change from the week before",
+  show_trend: "Trend",
+  show_trend_helper: "A line of the chosen area's past six months with its figures.",
+  trend_caption: "{weeks} weeks",
+  week_short: "Wk",
+  default_area: "Default county",
+  default_area_helper: "Chosen whenever the card loads. Clicking it again shows the whole country."
 };
 
 // src/localize/languages/fi.json
@@ -674,10 +730,24 @@ var fi_default = {
   last_week: "Viime viikko",
   two_weeks_ago: "Toissa viikko",
   change: "Muutos",
-  entity: "Tauti",
-  entity_helper: "thl-integraation taudin sensori.",
+  entity: "Tauti tai influenssankaltaiset k\xE4ynnit",
+  entity_helper: "thl-integraation taudin tai influenssankaltaisten k\xE4yntien koko maan sensori.",
   map_width: "Kartan leveys",
-  map_width_helper: "J\xE4t\xE4 tyhj\xE4ksi, niin kartta seuraa kortin leveytt\xE4."
+  map_width_helper: "J\xE4t\xE4 tyhj\xE4ksi, niin kartta seuraa kortin leveytt\xE4.",
+  incidence: "Ilmaantuvuus",
+  visits: "K\xE4ynnit",
+  trend: "Trendi",
+  highest: "huippu",
+  color_by: "V\xE4rit",
+  color_by_helper: "Taso vertaa jokaista aluetta koko maahan; muutos alueen omaan edelliseen viikkoon.",
+  color_by_level: "Taso koko maahan verrattuna",
+  color_by_change: "Muutos edellisest\xE4 viikosta",
+  show_trend: "Trendi",
+  show_trend_helper: "Valitun alueen kuusi viime kuukautta viivana lukujen yhteydess\xE4.",
+  trend_caption: "{weeks} viikkoa",
+  week_short: "Vk",
+  default_area: "Oletusalue",
+  default_area_helper: "Valitaan aina, kun kortti latautuu. Sen uudelleen napsauttaminen n\xE4ytt\xE4\xE4 koko maan."
 };
 
 // src/localize/localize.ts
@@ -696,17 +766,47 @@ function browserLanguage() {
 }
 
 // src/editor.ts
-var SCHEMA = [
-  {
-    name: "entity",
-    required: true,
-    selector: { entity: { domain: "sensor", integration: "thl" } }
-  },
-  {
-    name: "map_width",
-    selector: { number: { min: 120, max: 600, step: 5, unit_of_measurement: "px", mode: "box" } }
-  }
-];
+var DEFAULTS = { color_by: "level", show_trend: true };
+function cardEntities(hass) {
+  return Object.values(hass.states).filter((entity) => entity !== void 0 && entity.entity_id.startsWith("sensor.")).filter(
+    (entity) => Array.isArray(entity?.attributes.values) && String(entity?.attributes.attribution).includes("THL")
+  ).map((entity) => entity.entity_id).sort();
+}
+function countyOptions(hass, entity, text) {
+  const values = hass.states[entity]?.attributes.values ?? [];
+  const counties = values.filter((area) => area.area_id !== WHOLE_COUNTRY).map((area) => ({ value: area.area_id, label: area.name })).sort((a3, b3) => a3.label.localeCompare(b3.label));
+  return [{ value: "", label: text("whole_country") }, ...counties];
+}
+function schema(hass, entity, text) {
+  return [
+    {
+      name: "entity",
+      required: true,
+      selector: { entity: { domain: "sensor", integration: "thl", include_entities: cardEntities(hass) } }
+    },
+    {
+      name: "color_by",
+      selector: {
+        select: {
+          mode: "dropdown",
+          options: [
+            { value: "level", label: text("color_by_level") },
+            { value: "change", label: text("color_by_change") }
+          ]
+        }
+      }
+    },
+    {
+      name: "default_area",
+      selector: { select: { mode: "dropdown", options: countyOptions(hass, entity, text) } }
+    },
+    { name: "show_trend", selector: { boolean: {} } },
+    {
+      name: "map_width",
+      selector: { number: { min: 120, max: 600, step: 5, unit_of_measurement: "px", mode: "box" } }
+    }
+  ];
+}
 var ThlCardEditor = class extends i4 {
   constructor() {
     super(...arguments);
@@ -722,8 +822,8 @@ var ThlCardEditor = class extends i4 {
     return b2`
       <ha-form
         .hass=${this.hass}
-        .data=${this.config}
-        .schema=${SCHEMA}
+        .data=${{ ...DEFAULTS, ...this.config }}
+        .schema=${schema(this.hass, this.config.entity, (key) => this.text(key))}
         .computeLabel=${(entry) => this.text(entry.name)}
         .computeHelper=${(entry) => this.helper(entry.name)}
         @value-changed=${this.valueChanged}
@@ -734,6 +834,14 @@ var ThlCardEditor = class extends i4 {
     const config = { ...event.detail.value };
     if (config.map_width === void 0 || config.map_width === null || String(config.map_width) === "") {
       delete config.map_width;
+    }
+    if (!config.default_area) {
+      delete config.default_area;
+    }
+    for (const [key, value] of Object.entries(DEFAULTS)) {
+      if (config[key] === value) {
+        delete config[key];
+      }
     }
     this.dispatchEvent(
       new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true })
@@ -759,10 +867,6 @@ __decorateClass([
 ThlCardEditor = __decorateClass([
   t3("thl-card-editor")
 ], ThlCardEditor);
-
-// src/const.ts
-var CARD_VERSION = "2.0.0";
-var WHOLE_COUNTRY = "finland";
 
 // src/logos.ts
 var DISEASE_LOGO = b2`
@@ -1135,7 +1239,52 @@ var COUNTY_LABELS = [
   { id: "ahvenanmaa", bottom: 20, left: 10 }
 ];
 
+// src/trend.ts
+var DAY = 24 * 60 * 60 * 1e3;
+function weekStart(moment) {
+  const date = new Date(moment);
+  const sinceMonday = (date.getDay() + 6) % 7;
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() - sinceMonday);
+  return date.getTime();
+}
+function isoWeek(moment) {
+  const date = new Date(moment);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+  const firstThursday = new Date(date.getFullYear(), 0, 4);
+  firstThursday.setDate(firstThursday.getDate() + 3 - (firstThursday.getDay() + 6) % 7);
+  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * DAY));
+}
+function weeklyPoints(rows, weeks) {
+  const byWeek = /* @__PURE__ */ new Map();
+  for (const row of rows) {
+    if (row.mean === null || row.mean === void 0) {
+      continue;
+    }
+    const start = typeof row.start === "number" ? row.start : Date.parse(row.start);
+    const week = weekStart(start);
+    byWeek.set(week, { week, value: row.mean });
+  }
+  return [...byWeek.values()].sort((a3, b3) => a3.week - b3.week).slice(-weeks);
+}
+async function fetchTrend(hass, statisticId, weeks, now = Date.now()) {
+  if (!hass.callWS) {
+    return [];
+  }
+  const start = new Date(weekStart(now) - weeks * 7 * DAY).toISOString();
+  const result = await hass.callWS({
+    type: "recorder/statistics_during_period",
+    start_time: start,
+    statistic_ids: [statisticId],
+    period: "day",
+    types: ["mean"]
+  });
+  return weeklyPoints(result[statisticId] ?? [], weeks);
+}
+
 // src/thl-card.ts
+var TREND_WEEKS = 26;
 console.info(
   `%c  THL-CARD  
 %c  ${CARD_VERSION}    `,
@@ -1152,17 +1301,23 @@ registry.customCards.push({
   preview: true
 });
 var ThlCard = class extends i4 {
+  constructor() {
+    super(...arguments);
+    this.trend = [];
+  }
   static getConfigElement() {
     return document.createElement("thl-card-editor");
   }
   /** Offers the first disease of the thl integration when the card is added from the picker. */
   static getStubConfig(hass) {
-    const entity = Object.keys(hass?.states ?? {}).find((id) => id.startsWith("sensor.thl_"));
-    return { entity: entity ?? "" };
+    return { entity: (hass ? cardEntities(hass)[0] : void 0) ?? "" };
   }
   setConfig(config) {
     if (!config || !config.entity) {
       throw new Error(translate(browserLanguage(), "invalid_configuration"));
+    }
+    if (this.config?.default_area !== config.default_area || this.config === void 0) {
+      this.selected = config.default_area || void 0;
     }
     this.config = { ...config };
   }
@@ -1174,7 +1329,7 @@ var ThlCard = class extends i4 {
     return { columns: 12, rows: "auto", min_columns: 6 };
   }
   shouldUpdate(changed) {
-    if (changed.has("config") || changed.has("selected") || !this.config) {
+    if (changed.has("config") || changed.has("selected") || changed.has("trend") || changed.has("hovered") || !this.config) {
       return true;
     }
     const previous = changed.get("hass");
@@ -1194,22 +1349,48 @@ var ThlCard = class extends i4 {
     const areas = entity.attributes.values ?? [];
     const selected = this.selected === void 0 ? void 0 : findArea(areas, this.selected);
     const whole = findArea(areas, WHOLE_COUNTRY);
+    const title = selected?.name ?? this.text("whole_country");
     return b2`
       <ha-card>
-        <div class="card">
+        <div class="card ${this.wide ? "wide" : ""}">
           <div class="disease">
             ${DISEASE_LOGO}
-            <span class="disease-name">${entity.attributes.disease_name}</span>
+            <span class="disease-name">${this.name(entity.attributes)}</span>
           </div>
-          ${this.map(areas)}
-          <div class="figures">
-            ${this.stats(selected?.name ?? this.text("whole_country"), selected ?? whole)}
+          <div class="body">
+            ${this.map(areas, whole)}
+            <div class="side">
+              <div class="figures">
+                ${isVisits(areas) ? this.visits(title, selected ?? whole) : this.stats(title, selected ?? whole)}
+              </div>
+            </div>
           </div>
+          ${this.trendLine()}
         </div>
       </ha-card>
     `;
   }
-  map(areas) {
+  updated() {
+    void this.refreshTrend();
+  }
+  /** The disease, or the flu-like illness visits, which have no disease and go by their sensor's name. */
+  name(attributes) {
+    const disease = attributes.disease_name;
+    return disease ?? String(attributes.friendly_name ?? "").replace(/^THL\s+/, "");
+  }
+  /**
+   * A card a whole section wide puts its figures beside the map, over the sea west of it, so it isn't
+   * taller than it needs to be. Narrower cards keep them under the map. A card not resized is as wide
+   * as the section.
+   */
+  get wide() {
+    const columns = this.config?.grid_options?.columns ?? 12;
+    return columns === "full" || Number(columns) >= 12;
+  }
+  get colorBy() {
+    return this.config?.color_by ?? "level";
+  }
+  map(areas, whole) {
     const width = this.config?.map_width;
     const size = width === void 0 ? `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT};` : `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT}; width: ${width}px; max-width: 100%;`;
     return b2`
@@ -1227,7 +1408,7 @@ var ThlCard = class extends i4 {
         <svg viewBox="${MAP_VIEW_BOX}" version="1.1" preserveAspectRatio="xMidYMid meet">
           <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
             ${OUTLINES.filter((outline) => outline.layer === "under").map((outline) => this.outline(outline))}
-            ${COUNTIES.map((county) => this.county(county, areas))}
+            ${COUNTIES.map((county) => this.county(county, areas, whole))}
           </g>
           <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
             ${OUTLINES.filter((outline) => outline.layer === "over").map((outline) => this.outline(outline))}
@@ -1236,11 +1417,11 @@ var ThlCard = class extends i4 {
       </div>
     `;
   }
-  county(county, areas) {
+  county(county, areas, whole) {
     return w`<path
       d="${county.d}"
       transform="${o6(county.transform)}"
-      style="display:inline;fill:${fillColor(findArea(areas, county.id))}"
+      style="display:inline;fill:${fillColor(findArea(areas, county.id), this.colorBy, whole)}"
       id="${county.id}"
       class="${this.selected === county.id ? "selected" : ""}"
       @click="${() => this.select(county.id)}" />`;
@@ -1257,12 +1438,137 @@ var ThlCard = class extends i4 {
       <div class="stats-container">
         <span class="stats-title">${title}</span>
         <span class="stats">${this.text("last_week")}: ${area.amount_last_week}</span>
+        ${area.incidence_last_week === void 0 ? A : b2`<span class="stats">
+                ${this.text("incidence")}: ${this.number(area.incidence_last_week, 1)} / 100 000
+              </span>`}
         ${area.amount_two_weeks_ago === void 0 ? A : b2`<span class="stats">${this.text("two_weeks_ago")}: ${area.amount_two_weeks_ago}</span>`}
         ${area.change_percentage === void 0 ? A : b2`<span class="stats">
                 ${this.text("change")}: ${area.change_percentage}% (${area.change_in_numbers})
               </span>`}
       </div>
     `;
+  }
+  /** The figures of the flu-like illness visits: their share of all visits, and how many there were. */
+  visits(title, area) {
+    if (area === void 0) {
+      return A;
+    }
+    const share = (value) => value === null || value === void 0 ? "\u2013" : `${this.number(value, 3)} %`;
+    return b2`
+      <div class="stats-container">
+        <span class="stats-title">${title}</span>
+        <span class="stats">${this.text("last_week")}: ${share(area.share_last_week)}</span>
+        ${area.visits_last_week === void 0 ? A : b2`<span class="stats">
+                ${this.text("visits")}: ${this.number(area.visits_last_week, 0)} /
+                ${this.number(area.all_visits_last_week ?? 0, 0)}
+              </span>`}
+        ${area.share_two_weeks_ago === void 0 ? A : b2`<span class="stats"
+                >${this.text("two_weeks_ago")}: ${share(area.share_two_weeks_ago)}</span
+              >`}
+      </div>
+    `;
+  }
+  /** The chosen area's figure over the past weeks, as a line under its figures. Pointing at it shows a week. */
+  trendLine() {
+    if (this.config?.show_trend === false || this.trend.length < 2) {
+      return A;
+    }
+    const values = this.trend.map((point) => point.value);
+    const highest = Math.max(...values);
+    const top = highest > 0 ? highest : 1;
+    const x2 = (index) => index / (values.length - 1) * 100;
+    const y3 = (value) => 28 - value / top * 26;
+    const points = values.map((value, index) => `${x2(index).toFixed(2)},${y3(value).toFixed(2)}`).join(" ");
+    const digits = isVisits(this.areas()) ? 3 : 1;
+    const marked = this.hovered ?? values.length - 1;
+    const at = `left: ${x2(marked).toFixed(2)}%; top: ${(y3(values[marked]) / 30 * 100).toFixed(2)}%;`;
+    return b2`
+      <div class="trend">
+        <div
+          class="trend-plot"
+          @pointermove=${(event) => this.hover(event)}
+          @pointerleave=${() => this.hovered = void 0}
+        >
+          <svg viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="${this.text("trend")}">
+            <polyline class="trend-area" points="0,30 ${points} 100,30" />
+            <polyline class="trend-line" points="${points}" vector-effect="non-scaling-stroke" />
+          </svg>
+          <span class="trend-dot ${this.hovered === void 0 ? "" : "hovered"}" style="${at}"></span>
+          ${this.hovered === void 0 ? A : b2`<span class="trend-bubble" style="left: ${x2(marked).toFixed(2)}%;">
+                  ${this.text("week_short")} ${this.dataWeek(marked)}: ${this.number(values[marked], digits)}
+                </span>`}
+        </div>
+        <span class="trend-caption">
+          ${this.text("trend_caption", { weeks: String(values.length) })} · ${this.text("highest")}
+          ${this.number(highest, digits)}
+        </span>
+      </div>
+    `;
+  }
+  hover(event) {
+    const plot = event.currentTarget;
+    const box = plot.getBoundingClientRect();
+    if (box.width === 0 || this.trend.length < 2) {
+      return;
+    }
+    const fraction = Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1);
+    this.hovered = Math.round(fraction * (this.trend.length - 1));
+  }
+  /**
+   * The week a point's figure is from. A figure is shown from the week after its own, so a point is the
+   * week before the one it sits in; the newest point is the figure the sensor shows now.
+   */
+  dataWeek(index) {
+    if (index === this.trend.length - 1) {
+      const week = Number(this.hass?.states[this.config?.entity ?? ""]?.attributes.last_week);
+      if (Number.isFinite(week)) {
+        return week;
+      }
+    }
+    return isoWeek(this.trend[index].week - 7 * 24 * 60 * 60 * 1e3);
+  }
+  /** The sensor the trend is drawn from: the level for colouring by level, the cases otherwise. */
+  trendSource() {
+    const areas = this.areas();
+    const area = findArea(areas, this.selected ?? WHOLE_COUNTRY);
+    if (area === void 0) {
+      return void 0;
+    }
+    const byLevel = this.colorBy === "level" && level(area) !== void 0;
+    return byLevel && area.incidence_entity_id || area.entity_id || void 0;
+  }
+  async refreshTrend() {
+    if (!this.hass || !this.config || this.config.show_trend === false) {
+      return;
+    }
+    const source = this.trendSource();
+    const weeks = TREND_WEEKS;
+    const week = String(this.hass.states[this.config.entity]?.attributes.last_week ?? "");
+    const key = `${source}|${weeks}|${week}`;
+    if (key === this.trendKey) {
+      return;
+    }
+    this.trendKey = key;
+    this.hovered = void 0;
+    if (source === void 0) {
+      this.trend = [];
+      return;
+    }
+    try {
+      const points = await fetchTrend(this.hass, source, weeks);
+      if (this.trendKey === key) {
+        this.trend = points;
+      }
+    } catch {
+      this.trend = [];
+    }
+  }
+  areas() {
+    const entity = this.config ? this.hass?.states[this.config.entity] : void 0;
+    return entity?.attributes.values ?? [];
+  }
+  number(value, digits) {
+    return new Intl.NumberFormat(this.language(), { maximumFractionDigits: digits }).format(value);
   }
   message(text) {
     return b2`<ha-card><div class="message">${text}</div></ha-card>`;
@@ -1271,8 +1577,10 @@ var ThlCard = class extends i4 {
     this.selected = this.selected === id ? void 0 : id;
   }
   text(key, replacements) {
-    const language = this.hass?.locale?.language ?? this.hass?.language ?? browserLanguage();
-    return translate(language, key, replacements);
+    return translate(this.language(), key, replacements);
+  }
+  language() {
+    return this.hass?.locale?.language ?? this.hass?.language ?? browserLanguage();
   }
   static get styles() {
     return i`
@@ -1378,6 +1686,137 @@ var ThlCard = class extends i4 {
         font-size: 12px;
       }
 
+      .body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+      }
+
+      .side {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+      }
+
+      /* A whole section wide: the map to the right, the figures over the sea west of it. */
+      .wide .body {
+        position: relative;
+        align-items: flex-end;
+      }
+
+      .wide .map {
+        width: min(68%, 300px);
+      }
+
+      .wide .side {
+        position: absolute;
+        left: 0;
+        top: 30%;
+        width: 50%;
+        align-items: flex-start;
+        /* Only the figures take the pointer; the counties under the rest stay clickable. */
+        pointer-events: none;
+      }
+
+      .wide .side > * {
+        pointer-events: auto;
+      }
+
+      .wide.card {
+        padding: 12px 25px;
+      }
+
+      .wide .disease {
+        font-size: clamp(11px, 5.5cqw, 20px);
+      }
+
+      .wide .trend {
+        width: 100%;
+      }
+
+      .wide .figures {
+        justify-content: flex-start;
+      }
+
+      .wide .stats-container {
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .trend {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        width: min(100%, 300px);
+      }
+
+      .trend-plot {
+        position: relative;
+        width: 100%;
+        height: 40px;
+        cursor: crosshair;
+      }
+
+      .trend svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+
+      .trend-dot {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        margin: -3px 0 0 -3px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        pointer-events: none;
+      }
+
+      .trend-dot.hovered {
+        width: 8px;
+        height: 8px;
+        margin: -4px 0 0 -4px;
+        box-shadow: 0 0 0 2px var(--card-background-color, #fff);
+      }
+
+      .trend-bubble {
+        position: absolute;
+        bottom: calc(100% + 4px);
+        transform: translateX(-50%);
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: var(--primary-text-color);
+        color: var(--card-background-color, #fff);
+        font-size: 11px;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+
+      .trend-line {
+        fill: none;
+        stroke: var(--primary-color);
+        stroke-width: 2;
+        stroke-linejoin: round;
+      }
+
+      .trend-area {
+        fill: var(--primary-color);
+        opacity: 0.15;
+        stroke: none;
+      }
+
+      .trend-caption {
+        font-size: 11px;
+        color: var(--secondary-text-color);
+      }
+
       .message {
         padding: 16px;
         color: var(--primary-text-color);
@@ -1394,6 +1833,12 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ThlCard.prototype, "selected", 2);
+__decorateClass([
+  r5()
+], ThlCard.prototype, "trend", 2);
+__decorateClass([
+  r5()
+], ThlCard.prototype, "hovered", 2);
 ThlCard = __decorateClass([
   t3("thl-card")
 ], ThlCard);
