@@ -2,9 +2,11 @@
 
 Home Assistant dashboard card that draws THL's weekly disease numbers on a map of Finland.
 
-[![GitHub Release][releases-shield]][releases]
-[![License][license-shield]](LICENSE)
-[![GitHub Activity][commits-shield]][commits]
+[![GitHub Release][releases-shield]][releases] [![GitHub Release Date][release-date-shield]][releases]
+
+[![HACS][hacs-shield]][hacs] [![Home Assistant][home-assistant-shield]][home-assistant] [![License][license-shield]](LICENSE)
+
+![Project Maintenance][maintenance-shield] [![GitHub Activity][commits-shield]][commits] [![Open bugs][bugs-shield]][bugs] [![Open enhancements][enhancements-shield]][enhancements]
 
 ## Support
 
@@ -32,8 +34,8 @@ The numbers come from the [thl](https://www.github.com/jesmak/thl) integration, 
 
 ### Manually
 
-1. Download `thl-card.js` from the latest release and copy it to the `config/www` folder of your Home Assistant
-   installation
+1. Take `dist/thl-card.js` from the source code of the [latest release][releases] and copy it to the
+   `config/www` folder of your Home Assistant installation
 2. In Home Assistant settings, open dashboards, click the three dots at the top right and open resources
 3. Add a new resource with the path `/local/thl-card.js` and type JavaScript
 4. Refresh your browser
@@ -128,8 +130,18 @@ HACS installs and is committed to the repository.
 
 Disease statistics: [THL](https://thl.fi/), through the [thl](https://www.github.com/jesmak/thl) integration.
 
+[releases-shield]: https://img.shields.io/github/release/jesmak/thl-card.svg?style=for-the-badge
+[release-date-shield]: https://img.shields.io/github/release-date/jesmak/thl-card?style=for-the-badge
+[releases]: https://github.com/jesmak/thl-card/releases
+[hacs-shield]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
+[hacs]: https://hacs.xyz/docs/faq/custom_repositories/
+[home-assistant-shield]: https://img.shields.io/badge/Home%20Assistant-visual%20editor%20%2F%20yaml-green.svg?style=for-the-badge
+[home-assistant]: https://www.home-assistant.io/
+[license-shield]: https://img.shields.io/github/license/jesmak/thl-card.svg?style=for-the-badge
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg?style=for-the-badge
 [commits-shield]: https://img.shields.io/github/commit-activity/y/jesmak/thl-card.svg?style=for-the-badge
 [commits]: https://github.com/jesmak/thl-card/commits/main
-[license-shield]: https://img.shields.io/github/license/jesmak/thl-card.svg?style=for-the-badge
-[releases-shield]: https://img.shields.io/github/release/jesmak/thl-card.svg?style=for-the-badge
-[releases]: https://github.com/jesmak/thl-card/releases
+[bugs-shield]: https://img.shields.io/github/issues/jesmak/thl-card/bug?style=for-the-badge&label=bugs&color=red
+[bugs]: https://github.com/jesmak/thl-card/labels/bug
+[enhancements-shield]: https://img.shields.io/github/issues/jesmak/thl-card/enhancement?style=for-the-badge&label=enhancements&color=blue
+[enhancements]: https://github.com/jesmak/thl-card/labels/enhancement
