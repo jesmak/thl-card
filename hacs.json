@@ -1,5 +1,6 @@
 {
   "name": "THL card",
   "render_readme": true,
-  "filename": "thl-card.js"
+  "filename": "thl-card.js",
+  "homeassistant": "2026.9.3"
 }
