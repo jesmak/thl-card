@@ -17,7 +17,7 @@
   "trend": "Trend",
   "highest": "highest",
   "color_by": "Colours",
-  "color_by_helper": "Level compares each county with the whole country; change with the county's own week before.",
+  "color_by_helper": "Level compares each county with the whole country. Change compares it with its own week before.",
   "color_by_level": "Level compared with the whole country",
   "color_by_change": "Change from the week before",
   "show_trend": "Trend",

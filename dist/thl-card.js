@@ -1,4 +1,4 @@
-/*! thl-card 2.0.0 | MIT License */
+/*! thl-card 2.0.1 | MIT License */
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -607,7 +607,7 @@ function r5(r6) {
 var o6 = (o7) => o7 ?? A;
 
 // src/const.ts
-var CARD_VERSION = "2.0.0";
+var CARD_VERSION = "2.0.1";
 var WHOLE_COUNTRY = "finland";
 
 // src/areas.ts
@@ -708,7 +708,7 @@ var en_default = {
   trend: "Trend",
   highest: "highest",
   color_by: "Colours",
-  color_by_helper: "Level compares each county with the whole country; change with the county's own week before.",
+  color_by_helper: "Level compares each county with the whole country. Change compares it with its own week before.",
   color_by_level: "Level compared with the whole country",
   color_by_change: "Change from the week before",
   show_trend: "Trend",
@@ -739,7 +739,7 @@ var fi_default = {
   trend: "Trendi",
   highest: "huippu",
   color_by: "V\xE4rit",
-  color_by_helper: "Taso vertaa jokaista aluetta koko maahan; muutos alueen omaan edelliseen viikkoon.",
+  color_by_helper: "Taso vertaa jokaista aluetta koko maahan. Muutos vertaa aluetta sen omaan edelliseen viikkoon.",
   color_by_level: "Taso koko maahan verrattuna",
   color_by_change: "Muutos edellisest\xE4 viikosta",
   show_trend: "Trendi",

@@ -17,7 +17,7 @@
   "trend": "Trendi",
   "highest": "huippu",
   "color_by": "Värit",
-  "color_by_helper": "Taso vertaa jokaista aluetta koko maahan; muutos alueen omaan edelliseen viikkoon.",
+  "color_by_helper": "Taso vertaa jokaista aluetta koko maahan. Muutos vertaa aluetta sen omaan edelliseen viikkoon.",
   "color_by_level": "Taso koko maahan verrattuna",
   "color_by_change": "Muutos edellisestä viikosta",
   "show_trend": "Trendi",
