@@ -33,16 +33,34 @@ export function level(area: Area | undefined): number | undefined {
 }
 
 /**
- * The change as a number. The integration sends a rounded string, the number 0
- * when there was nothing to compare with, and nothing at all when THL hasn't
- * published the week before.
+ * The change as a number. For a disease the integration sends a rounded string, the number 0 when there was nothing
+ * to compare with, and nothing at all when THL hasn't published the week before. The flu-like illness visits come
+ * without one, so their change is the change of their share.
  */
 export function changePercentage(area: Area): number {
-    return Number(area.change_percentage ?? NaN);
+    if (area.change_percentage !== undefined) {
+        return Number(area.change_percentage);
+    }
+    const now = area.share_last_week;
+    const before = area.share_two_weeks_ago;
+    if (now === null || now === undefined || before === null || before === undefined || before === 0) {
+        return NaN;
+    }
+    return ((now - before) / before) * 100;
+}
+
+/** Whether there was nothing to compare with: the number 0 from the integration, as a string "0" is a real reading. */
+function nothingBefore(area: Area): boolean {
+    return area.change_percentage === 0;
+}
+
+/** The change as written under the map: a dash when there was nothing the week before to compare with. */
+export function changeText(area: Area): string {
+    return nothingBefore(area) ? "–" : `${area.change_percentage}%`;
 }
 
 /** How a county is coloured, by level unless asked otherwise. */
-export function fillColor(area: Area | undefined, colorBy: ColorBy = "change", whole?: Area): string {
+export function fillColor(area: Area | undefined, colorBy: ColorBy = "level", whole?: Area): string {
     return colorBy === "level" ? levelColor(area, whole) : changeColor(area);
 }
 
@@ -82,11 +100,14 @@ export function levelColor(area: Area | undefined, whole: Area | undefined): str
 
 /** Coloured by how the county's cases changed from the week before: green falling, red rising. */
 export function changeColor(area: Area | undefined): string {
-    if (area === undefined) {
+    // A county of the flu-like illness visits with no visits at all has no share to change.
+    if (area === undefined || area.share_last_week === null) {
         return NO_DATA;
     }
-    // Only the number 0 means "nothing to compare with"; a string "0" is a real reading of no change.
-    if (area.change_percentage === 0 && (area.amount_last_week ?? 0) === 0) {
+    if (nothingBefore(area) && (area.amount_last_week ?? 0) === 0) {
+        return NO_CASES;
+    }
+    if (area.share_last_week === 0 && area.share_two_weeks_ago === 0) {
         return NO_CASES;
     }
 

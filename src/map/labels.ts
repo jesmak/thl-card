@@ -1,40 +1,62 @@
 /**
- * Where each county's case number is written on the map, placed by hand.
- *
- * The positions are in the map's own coordinate space, the 235 x 409 box the
- * drawing was made for: `bottom` counts up from its bottom edge and `left` from
- * its left edge. The card turns them into percentages, so they hold wherever
- * the map is scaled to.
+ * Where each county's number is written: the point inside the county furthest from its edge, computed once from
+ * the shapes in counties.ts by sampling them on a grid, not placed by hand. The positions are in the map's own
+ * coordinates, its viewBox, so they hold on the map and in the capital region's inset alike.
  */
 
 export interface CountyLabel {
     id: string;
-    bottom: number;
-    left: number;
+    x: number;
+    y: number;
 }
 
 export const COUNTY_LABELS: CountyLabel[] = [
-    { id: "ita-uudenmaan_hyvinvointialue", bottom: 15, left: 125 },
-    { id: "keski-uudenmaan_hyvinvointialue", bottom: 27, left: 105 },
-    { id: "lansi-uudenmaan_hyvinvointialue", bottom: 5, left: 80 },
-    { id: "vantaan_ja_keravan_hyvinvointialue", bottom: 14, left: 105 },
-    { id: "varsinais-suomen_hyvinvointialue", bottom: 25, left: 60 },
-    { id: "satakunnan_hyvinvointialue", bottom: 60, left: 50 },
-    { id: "kanta-hameen_hyvinvointialue", bottom: 40, left: 90 },
-    { id: "pirkanmaan_hyvinvointialue", bottom: 75, left: 80 },
-    { id: "paijat-hameen_hyvinvointialue", bottom: 50, left: 120 },
-    { id: "kymenlaakson_hyvinvointialue", bottom: 30, left: 150 },
-    { id: "etela-karjalan_hyvinvointialue", bottom: 50, left: 165 },
-    { id: "etela-savon_hyvinvointialue", bottom: 75, left: 150 },
-    { id: "pohjois-savon_hyvinvointialue", bottom: 125, left: 150 },
-    { id: "pohjois-karjalan_hyvinvointialue", bottom: 120, left: 200 },
-    { id: "keski-suomen_hyvinvointialue", bottom: 105, left: 115 },
-    { id: "etela-pohjanmaan_hyvinvointialue", bottom: 115, left: 70 },
-    { id: "pohjanmaan_hyvinvointialue", bottom: 135, left: 55 },
-    { id: "keski-pohjanmaan_hyvinvointialue", bottom: 150, left: 95 },
-    { id: "pohjois-pohjanmaan_hyvinvointialue", bottom: 180, left: 115 },
-    { id: "kainuun_hyvinvointialue", bottom: 180, left: 170 },
-    { id: "lapin_hyvinvointialue", bottom: 300, left: 140 },
-    { id: "helsingin_kaupunki", bottom: 5, left: 110 },
-    { id: "ahvenanmaa", bottom: 20, left: 10 },
+    { id: "etela-savon_hyvinvointialue", x: 1123.6, y: 2371.2 },
+    { id: "pohjois-karjalan_hyvinvointialue", x: 1496.9, y: 2024.7 },
+    { id: "kainuun_hyvinvointialue", x: 1280.8, y: 1590.7 },
+    { id: "pohjois-pohjanmaan_hyvinvointialue", x: 884.6, y: 1641.4 },
+    { id: "pohjois-savon_hyvinvointialue", x: 1127.1, y: 1921.7 },
+    { id: "keski-suomen_hyvinvointialue", x: 875.8, y: 2161.1 },
+    { id: "etela-karjalan_hyvinvointialue", x: 1210.0, y: 2544.6 },
+    { id: "kymenlaakson_hyvinvointialue", x: 1060.0, y: 2633.9 },
+    { id: "lansi-uudenmaan_hyvinvointialue", x: 682.3, y: 2756.8 },
+    { id: "paijat-hameen_hyvinvointialue", x: 911.9, y: 2487.3 },
+    { id: "kanta-hameen_hyvinvointialue", x: 723.3, y: 2586.8 },
+    { id: "pirkanmaan_hyvinvointialue", x: 637.8, y: 2378.0 },
+    { id: "lapin_hyvinvointialue", x: 1020.8, y: 804.9 },
+    { id: "etela-pohjanmaan_hyvinvointialue", x: 614.5, y: 2033.7 },
+    { id: "keski-pohjanmaan_hyvinvointialue", x: 725.0, y: 1857.4 },
+    { id: "pohjanmaan_hyvinvointialue", x: 566.2, y: 1837.5 },
+    { id: "satakunnan_hyvinvointialue", x: 424.6, y: 2337.1 },
+    { id: "varsinais-suomen_hyvinvointialue", x: 479.4, y: 2642.4 },
+    { id: "ahvenanmaa", x: 72.9, y: 2750.4 },
+    { id: "helsingin_kaupunki", x: 785.6, y: 2779.7 },
+    { id: "vantaan_ja_keravan_hyvinvointialue", x: 778.7, y: 2754.6 },
+    { id: "ita-uudenmaan_hyvinvointialue", x: 965.2, y: 2686.9 },
+    { id: "keski-uudenmaan_hyvinvointialue", x: 786.7, y: 2694.3 },
+];
+
+/**
+ * Where the capital region's numbers go on the map when there is no inset. Helsinki's and Vantaa's centres are a few
+ * pixels apart, so Helsinki's number is moved into the sea below it.
+ */
+export const WITHOUT_INSET: Record<string, { x: number; y: number }> = {
+    helsingin_kaupunki: { x: 785.6, y: 2830 },
+};
+
+/** The counties too small to point at on the map, drawn again larger in the inset. */
+export const CAPITAL_REGION = ["helsingin_kaupunki", "vantaan_ja_keravan_hyvinvointialue", "keski-uudenmaan_hyvinvointialue"];
+
+/** The part of the map the inset shows, as a viewBox: the capital region with a little room around it. */
+export const INSET_VIEW_BOX = "718.8 2593.1 169.3 237.7";
+
+/** The counties that reach into the inset, so it draws only those. */
+export const INSET_COUNTIES = [
+    "lansi-uudenmaan_hyvinvointialue",
+    "paijat-hameen_hyvinvointialue",
+    "kanta-hameen_hyvinvointialue",
+    "helsingin_kaupunki",
+    "vantaan_ja_keravan_hyvinvointialue",
+    "ita-uudenmaan_hyvinvointialue",
+    "keski-uudenmaan_hyvinvointialue",
 ];

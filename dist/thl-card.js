@@ -1,4 +1,4 @@
-/*! thl-card 2.0.1 | MIT License */
+/*! thl-card 2.1.0 | MIT License */
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -607,7 +607,7 @@ function r5(r6) {
 var o6 = (o7) => o7 ?? A;
 
 // src/const.ts
-var CARD_VERSION = "2.0.1";
+var CARD_VERSION = "2.1.0";
 var WHOLE_COUNTRY = "finland";
 
 // src/areas.ts
@@ -633,9 +633,23 @@ function level(area) {
   return value === null || value === void 0 ? void 0 : Number(value);
 }
 function changePercentage(area) {
-  return Number(area.change_percentage ?? NaN);
+  if (area.change_percentage !== void 0) {
+    return Number(area.change_percentage);
+  }
+  const now = area.share_last_week;
+  const before = area.share_two_weeks_ago;
+  if (now === null || now === void 0 || before === null || before === void 0 || before === 0) {
+    return NaN;
+  }
+  return (now - before) / before * 100;
 }
-function fillColor(area, colorBy = "change", whole) {
+function nothingBefore(area) {
+  return area.change_percentage === 0;
+}
+function changeText(area) {
+  return nothingBefore(area) ? "\u2013" : `${area.change_percentage}%`;
+}
+function fillColor(area, colorBy = "level", whole) {
   return colorBy === "level" ? levelColor(area, whole) : changeColor(area);
 }
 function levelColor(area, whole) {
@@ -666,10 +680,13 @@ function levelColor(area, whole) {
   return STEADY;
 }
 function changeColor(area) {
-  if (area === void 0) {
+  if (area === void 0 || area.share_last_week === null) {
     return NO_DATA;
   }
-  if (area.change_percentage === 0 && (area.amount_last_week ?? 0) === 0) {
+  if (nothingBefore(area) && (area.amount_last_week ?? 0) === 0) {
+    return NO_CASES;
+  }
+  if (area.share_last_week === 0 && area.share_two_weeks_ago === 0) {
     return NO_CASES;
   }
   const change = changePercentage(area);
@@ -699,8 +716,8 @@ var en_default = {
   last_week: "Last week",
   two_weeks_ago: "Two weeks ago",
   change: "Change",
-  entity: "Disease or flu-like illness visits",
-  entity_helper: "The whole country's sensor of a disease, or of the flu-like illness visits, from the thl integration.",
+  entity: "Diseases or flu-like illness visits",
+  entity_helper: "The whole country's sensor of a disease, or of the flu-like illness visits, provided by the thl integration. If you add several to the card, you can switch between them with the buttons at the top of the card.",
   map_width: "Map width",
   map_width_helper: "Leave empty and the map follows the width of the card.",
   incidence: "Incidence",
@@ -716,7 +733,16 @@ var en_default = {
   trend_caption: "{weeks} weeks",
   week_short: "Wk",
   default_area: "Default county",
-  default_area_helper: "Chosen whenever the card loads. Clicking it again shows the whole country."
+  default_area_helper: "Chosen whenever the card loads. Clicking it again shows the whole country.",
+  last_year: "A year ago",
+  capital_region: "Capital region",
+  key_level: "incidence compared with the whole country",
+  key_share: "share of visits compared with the whole country",
+  key_change: "change from the week before",
+  show_inset: "Capital region inset",
+  show_inset_helper: "The capital region drawn again larger beside the figures, so its small counties are easier to choose.",
+  show_key: "Colour key",
+  show_key_helper: "What the map's colours mean, under the map."
 };
 
 // src/localize/languages/fi.json
@@ -730,8 +756,8 @@ var fi_default = {
   last_week: "Viime viikko",
   two_weeks_ago: "Toissa viikko",
   change: "Muutos",
-  entity: "Tauti tai influenssankaltaiset k\xE4ynnit",
-  entity_helper: "thl-integraation taudin tai influenssankaltaisten k\xE4yntien koko maan sensori.",
+  entity: "Taudit tai influenssankaltaiset k\xE4ynnit",
+  entity_helper: "thl-integraation tarjoama taudin tai influenssankaltaisten k\xE4yntien koko maan sensori. Jos kortille on lis\xE4tty useampia, voit vaihtaa niiden v\xE4lill\xE4 kortin yl\xE4reunassa olevien painikkeiden avulla.",
   map_width: "Kartan leveys",
   map_width_helper: "J\xE4t\xE4 tyhj\xE4ksi, niin kartta seuraa kortin leveytt\xE4.",
   incidence: "Ilmaantuvuus",
@@ -747,7 +773,16 @@ var fi_default = {
   trend_caption: "{weeks} viikkoa",
   week_short: "Vk",
   default_area: "Oletusalue",
-  default_area_helper: "Valitaan aina, kun kortti latautuu. Sen uudelleen napsauttaminen n\xE4ytt\xE4\xE4 koko maan."
+  default_area_helper: "Valitaan aina, kun kortti latautuu. Sen uudelleen napsauttaminen n\xE4ytt\xE4\xE4 koko maan.",
+  last_year: "Vuosi sitten",
+  capital_region: "P\xE4\xE4kaupunkiseutu",
+  key_level: "ilmaantuvuus koko maahan verrattuna",
+  key_share: "k\xE4yntien osuus koko maahan verrattuna",
+  key_change: "muutos edellisest\xE4 viikosta",
+  show_inset: "P\xE4\xE4kaupunkiseudun suurennos",
+  show_inset_helper: "P\xE4\xE4kaupunkiseutu uudelleen suurempana lukujen vieress\xE4, jotta sen pienet alueet on helpompi valita.",
+  show_key: "V\xE4rien selitys",
+  show_key_helper: "Mit\xE4 kartan v\xE4rit tarkoittavat, kartan alla."
 };
 
 // src/localize/localize.ts
@@ -766,9 +801,9 @@ function browserLanguage() {
 }
 
 // src/editor.ts
-var DEFAULTS = { color_by: "level", show_trend: true };
+var DEFAULTS = { color_by: "level", show_trend: true, show_inset: true, show_key: true };
 function cardEntities(hass) {
-  return Object.values(hass.states).filter((entity) => entity !== void 0 && entity.entity_id.startsWith("sensor.")).filter((entity) => Array.isArray(entity?.attributes.values) && String(entity?.attributes.attribution).includes("THL")).map((entity) => entity.entity_id).sort();
+  return Object.values(hass.states).filter((entity) => entity !== void 0 && entity.entity_id.startsWith("sensor.")).filter((entity) => Array.isArray(entity.attributes.values) && String(entity.attributes.attribution).includes("THL")).map((entity) => entity.entity_id).sort();
 }
 function countyOptions(hass, entity, text) {
   const values = hass.states[entity]?.attributes.values ?? [];
@@ -780,7 +815,7 @@ function schema(hass, entity, text) {
     {
       name: "entity",
       required: true,
-      selector: { entity: { domain: "sensor", integration: "thl", include_entities: cardEntities(hass) } }
+      selector: { entity: { multiple: true, domain: "sensor", integration: "thl", include_entities: cardEntities(hass) } }
     },
     {
       name: "color_by",
@@ -799,6 +834,8 @@ function schema(hass, entity, text) {
       selector: { select: { mode: "dropdown", options: countyOptions(hass, entity, text) } }
     },
     { name: "show_trend", selector: { boolean: {} } },
+    { name: "show_inset", selector: { boolean: {} } },
+    { name: "show_key", selector: { boolean: {} } },
     {
       name: "map_width",
       selector: { number: { min: 120, max: 600, step: 5, unit_of_measurement: "px", mode: "box" } }
@@ -820,16 +857,22 @@ var ThlCardEditor = class extends i4 {
     return b2`
             <ha-form
                 .hass=${this.hass}
-                .data=${{ ...DEFAULTS, ...this.config }}
-                .schema=${schema(this.hass, this.config.entity, (key) => this.text(key))}
+                .data=${{ ...DEFAULTS, ...this.config, entity: this.entities() }}
+                .schema=${schema(this.hass, this.entities()[0] ?? "", (key) => this.text(key))}
                 .computeLabel=${(entry) => this.text(entry.name)}
                 .computeHelper=${(entry) => this.helper(entry.name)}
                 @value-changed=${this.valueChanged}
             ></ha-form>
         `;
   }
+  /** The configured sensors as a list, which the form's picker of several takes. */
+  entities() {
+    return [this.config.entity ?? []].flat().filter(Boolean);
+  }
   valueChanged(event) {
     const config = { ...event.detail.value };
+    const entities = [config.entity ?? []].flat();
+    config.entity = entities.length === 1 && !Array.isArray(this.config.entity) ? entities[0] : entities;
     if (config.map_width === void 0 || config.map_width === null || String(config.map_width) === "") {
       delete config.map_width;
     }
@@ -882,191 +925,191 @@ var DISEASE_LOGO = b2`
                 <g>
                     <path
                         d="M89.553,132.112 C66.909,132.112 48.553,113.756 48.553,91.112 C48.553,68.468 66.909,50.112 89.553,50.112 C112.197,50.112 130.553,68.468 130.553,91.112 C130.553,113.756 112.197,132.112 89.553,132.112 z"
-                        fill="#FFFFFF"
+                        style="fill: var(--card-background-color, #fff)"
                     />
                     <path
                         d="M89.553,132.112 C66.909,132.112 48.553,113.756 48.553,91.112 C48.553,68.468 66.909,50.112 89.553,50.112 C112.197,50.112 130.553,68.468 130.553,91.112 C130.553,113.756 112.197,132.112 89.553,132.112 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="7"
                     />
                 </g>
                 <g>
                     <path
                         d="M84.563,32.42 L84.563,32.42 C86.699,32.233 88.583,33.814 88.77,35.95 L89.773,47.417 C89.96,49.553 88.38,51.437 86.243,51.624 L86.243,51.624 C84.106,51.811 82.222,50.23 82.035,48.094 L81.032,36.627 C80.845,34.491 82.426,32.607 84.563,32.42 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M84.563,32.42 L84.563,32.42 C86.699,32.233 88.583,33.814 88.77,35.95 L89.773,47.417 C89.96,49.553 88.38,51.437 86.243,51.624 L86.243,51.624 C84.106,51.811 82.222,50.23 82.035,48.094 L81.032,36.627 C80.845,34.491 82.426,32.607 84.563,32.42 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M117.487,39.308 L117.487,39.308 C119.431,40.214 120.272,42.525 119.365,44.469 L114.501,54.9 C113.594,56.844 111.284,57.685 109.34,56.779 L109.34,56.779 C107.396,55.872 106.555,53.561 107.461,51.618 L112.326,41.186 C113.232,39.242 115.543,38.401 117.487,39.308 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M117.487,39.308 L117.487,39.308 C119.431,40.214 120.272,42.525 119.365,44.469 L114.501,54.9 C113.594,56.844 111.284,57.685 109.34,56.779 L109.34,56.779 C107.396,55.872 106.555,53.561 107.461,51.618 L112.326,41.186 C113.232,39.242 115.543,38.401 117.487,39.308 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M141.182,60.641 L141.182,60.641 C142.413,62.398 141.986,64.82 140.229,66.05 L130.8,72.652 C129.043,73.882 126.622,73.455 125.391,71.698 L125.391,71.698 C124.161,69.941 124.588,67.519 126.345,66.289 L135.774,59.687 C137.531,58.457 139.952,58.884 141.182,60.641 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M141.182,60.641 L141.182,60.641 C142.413,62.398 141.986,64.82 140.229,66.05 L130.8,72.652 C129.043,73.882 126.622,73.455 125.391,71.698 L125.391,71.698 C124.161,69.941 124.588,67.519 126.345,66.289 L135.774,59.687 C137.531,58.457 139.952,58.884 141.182,60.641 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M149.015,94.883 L149.015,94.883 C148.828,97.02 146.945,98.6 144.808,98.414 L133.342,97.41 C131.205,97.223 129.624,95.34 129.811,93.203 L129.811,93.203 C129.998,91.066 131.882,89.486 134.019,89.673 L145.485,90.676 C147.622,90.863 149.202,92.746 149.015,94.883 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M149.015,94.883 L149.015,94.883 C148.828,97.02 146.945,98.6 144.808,98.414 L133.342,97.41 C131.205,97.223 129.624,95.34 129.811,93.203 L129.811,93.203 C129.998,91.066 131.882,89.486 134.019,89.673 L145.485,90.676 C147.622,90.863 149.202,92.746 149.015,94.883 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M122.518,113.515 L122.518,113.515 C123.748,111.758 126.17,111.331 127.927,112.561 L137.355,119.163 C139.112,120.393 139.539,122.815 138.309,124.572 L138.309,124.572 C137.079,126.329 134.657,126.756 132.9,125.525 L123.471,118.923 C121.714,117.693 121.287,115.272 122.518,113.515 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M122.518,113.515 L122.518,113.515 C123.748,111.758 126.17,111.331 127.927,112.561 L137.355,119.163 C139.112,120.393 139.539,122.815 138.309,124.572 L138.309,124.572 C137.079,126.329 134.657,126.756 132.9,125.525 L123.471,118.923 C121.714,117.693 121.287,115.272 122.518,113.515 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M105.117,126.986 L105.117,126.986 C107.132,126.252 109.361,127.291 110.094,129.307 L114.031,140.123 C114.765,142.138 113.725,144.367 111.71,145.1 L111.71,145.1 C109.694,145.834 107.466,144.795 106.732,142.779 L102.795,131.963 C102.062,129.948 103.101,127.719 105.117,126.986 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M105.117,126.986 L105.117,126.986 C107.132,126.252 109.361,127.291 110.094,129.307 L114.031,140.123 C114.765,142.138 113.725,144.367 111.71,145.1 L111.71,145.1 C109.694,145.834 107.466,144.795 106.732,142.779 L102.795,131.963 C102.062,129.948 103.101,127.719 105.117,126.986 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M82.087,129.551 L82.087,129.551 C84.199,129.923 85.61,131.938 85.237,134.05 L83.239,145.385 C82.866,147.497 80.852,148.908 78.74,148.535 L78.74,148.535 C76.627,148.163 75.217,146.149 75.589,144.036 L77.588,132.701 C77.96,130.589 79.975,129.178 82.087,129.551 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M82.087,129.551 L82.087,129.551 C84.199,129.923 85.61,131.938 85.237,134.05 L83.239,145.385 C82.866,147.497 80.852,148.908 78.74,148.535 L78.74,148.535 C76.627,148.163 75.217,146.149 75.589,144.036 L77.588,132.701 C77.96,130.589 79.975,129.178 82.087,129.551 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M62.229,120.228 L62.229,120.228 C63.745,121.744 63.745,124.203 62.229,125.72 L54.09,133.859 C52.573,135.375 50.114,135.375 48.598,133.859 L48.598,133.859 C47.081,132.342 47.081,129.883 48.598,128.366 L56.736,120.228 C58.253,118.711 60.712,118.711 62.229,120.228 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M62.229,120.228 L62.229,120.228 C63.745,121.744 63.745,124.203 62.229,125.72 L54.09,133.859 C52.573,135.375 50.114,135.375 48.598,133.859 L48.598,133.859 C47.081,132.342 47.081,129.883 48.598,128.366 L56.736,120.228 C58.253,118.711 60.712,118.711 62.229,120.228 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M50.723,99.548 L50.723,99.548 C51.279,101.62 50.049,103.75 47.977,104.305 L36.86,107.284 C34.788,107.839 32.658,106.61 32.103,104.538 L32.103,104.538 C31.548,102.466 32.777,100.336 34.849,99.781 L45.967,96.802 C48.039,96.247 50.168,97.477 50.723,99.548 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M50.723,99.548 L50.723,99.548 C51.279,101.62 50.049,103.75 47.977,104.305 L36.86,107.284 C34.788,107.839 32.658,106.61 32.103,104.538 L32.103,104.538 C31.548,102.466 32.777,100.336 34.849,99.781 L45.967,96.802 C48.039,96.247 50.168,97.477 50.723,99.548 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M51.471,78.34 L51.471,78.34 C50.737,80.355 48.508,81.394 46.493,80.661 L35.677,76.724 C33.662,75.991 32.622,73.762 33.356,71.746 L33.356,71.746 C34.089,69.731 36.318,68.692 38.334,69.425 L49.149,73.362 C51.165,74.096 52.204,76.324 51.471,78.34 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M51.471,78.34 L51.471,78.34 C50.737,80.355 48.508,81.394 46.493,80.661 L35.677,76.724 C33.662,75.991 32.622,73.762 33.356,71.746 L33.356,71.746 C34.089,69.731 36.318,68.692 38.334,69.425 L49.149,73.362 C51.165,74.096 52.204,76.324 51.471,78.34 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
                 <g>
                     <path
                         d="M52.218,44.659 L52.218,44.659 C53.861,43.281 56.31,43.495 57.689,45.138 L65.088,53.955 C66.466,55.598 66.252,58.048 64.609,59.427 L64.609,59.427 C62.966,60.805 60.516,60.591 59.137,58.948 L51.739,50.131 C50.36,48.488 50.575,46.038 52.218,44.659 z"
-                        fill="#000000"
+                        fill="currentColor"
                     />
                     <path
                         d="M52.218,44.659 L52.218,44.659 C53.861,43.281 56.31,43.495 57.689,45.138 L65.088,53.955 C66.466,55.598 66.252,58.048 64.609,59.427 L64.609,59.427 C62.966,60.805 60.516,60.591 59.137,58.948 L51.739,50.131 C50.36,48.488 50.575,46.038 52.218,44.659 z"
                         fill-opacity="0"
-                        stroke="#000000"
+                        stroke="currentColor"
                         stroke-width="1"
                     />
                 </g>
             </g>
             <path
                 d="M86.911,69.8 C83.873,69.8 81.411,67.338 81.411,64.3 C81.411,61.262 83.873,58.8 86.911,58.8 C89.948,58.8 92.411,61.262 92.411,64.3 C92.411,67.338 89.948,69.8 86.911,69.8 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M124.247,88.947 C121.21,88.947 118.747,86.485 118.747,83.447 C118.747,80.41 121.21,77.947 124.247,77.947 C127.285,77.947 129.747,80.41 129.747,83.447 C129.747,86.485 127.285,88.947 124.247,88.947 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M72.079,127.726 C69.041,127.726 66.579,125.264 66.579,122.226 C66.579,119.189 69.041,116.726 72.079,116.726 C75.117,116.726 77.579,119.189 77.579,122.226 C77.579,125.264 75.117,127.726 72.079,127.726 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M57.679,78.463 C54.641,78.463 52.179,76.001 52.179,72.963 C52.179,69.926 54.641,67.463 57.679,67.463 C60.717,67.463 63.179,69.926 63.179,72.963 C63.179,76.001 60.717,78.463 57.679,78.463 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M109.847,124.695 C106.81,124.695 104.347,122.232 104.347,119.195 C104.347,116.157 106.81,113.695 109.847,113.695 C112.885,113.695 115.347,116.157 115.347,119.195 C115.347,122.232 112.885,124.695 109.847,124.695 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M104.037,81.368 C100.999,81.368 98.537,78.906 98.537,75.868 C98.537,72.831 100.999,70.368 104.037,70.368 C107.074,70.368 109.537,72.831 109.537,75.868 C109.537,78.906 107.074,81.368 104.037,81.368 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M76.879,87.179 C73.841,87.179 71.379,84.717 71.379,81.679 C71.379,78.641 73.841,76.179 76.879,76.179 C79.917,76.179 82.379,78.641 82.379,81.679 C82.379,84.717 79.917,87.179 76.879,87.179 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M86.858,113.832 C83.82,113.832 81.358,111.369 81.358,108.332 C81.358,105.294 83.82,102.832 86.858,102.832 C89.895,102.832 92.358,105.294 92.358,108.332 C92.358,111.369 89.895,113.832 86.858,113.832 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M104.289,102.842 C101.252,102.842 98.789,100.38 98.789,97.342 C98.789,94.305 101.252,91.842 104.289,91.842 C107.327,91.842 109.789,94.305 109.789,97.342 C109.789,100.38 107.327,102.842 104.289,102.842 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M63.616,101.326 C60.578,101.326 58.116,98.864 58.116,95.826 C58.116,92.789 60.578,90.326 63.616,90.326 C66.653,90.326 69.116,92.789 69.116,95.826 C69.116,98.864 66.653,101.326 63.616,101.326 z"
-                fill="#000000"
+                fill="currentColor"
             />
             <path
                 d="M105.047,63.053 C102.01,63.053 99.547,60.59 99.547,57.553 C99.547,54.515 102.01,52.053 105.047,52.053 C108.085,52.053 110.547,54.515 110.547,57.553 C110.547,60.59 108.085,63.053 105.047,63.053 z"
-                fill="#000000"
+                fill="currentColor"
             />
         </g>
     </svg>
@@ -1210,38 +1253,56 @@ var OUTLINES = [
 
 // src/map/labels.ts
 var COUNTY_LABELS = [
-  { id: "ita-uudenmaan_hyvinvointialue", bottom: 15, left: 125 },
-  { id: "keski-uudenmaan_hyvinvointialue", bottom: 27, left: 105 },
-  { id: "lansi-uudenmaan_hyvinvointialue", bottom: 5, left: 80 },
-  { id: "vantaan_ja_keravan_hyvinvointialue", bottom: 14, left: 105 },
-  { id: "varsinais-suomen_hyvinvointialue", bottom: 25, left: 60 },
-  { id: "satakunnan_hyvinvointialue", bottom: 60, left: 50 },
-  { id: "kanta-hameen_hyvinvointialue", bottom: 40, left: 90 },
-  { id: "pirkanmaan_hyvinvointialue", bottom: 75, left: 80 },
-  { id: "paijat-hameen_hyvinvointialue", bottom: 50, left: 120 },
-  { id: "kymenlaakson_hyvinvointialue", bottom: 30, left: 150 },
-  { id: "etela-karjalan_hyvinvointialue", bottom: 50, left: 165 },
-  { id: "etela-savon_hyvinvointialue", bottom: 75, left: 150 },
-  { id: "pohjois-savon_hyvinvointialue", bottom: 125, left: 150 },
-  { id: "pohjois-karjalan_hyvinvointialue", bottom: 120, left: 200 },
-  { id: "keski-suomen_hyvinvointialue", bottom: 105, left: 115 },
-  { id: "etela-pohjanmaan_hyvinvointialue", bottom: 115, left: 70 },
-  { id: "pohjanmaan_hyvinvointialue", bottom: 135, left: 55 },
-  { id: "keski-pohjanmaan_hyvinvointialue", bottom: 150, left: 95 },
-  { id: "pohjois-pohjanmaan_hyvinvointialue", bottom: 180, left: 115 },
-  { id: "kainuun_hyvinvointialue", bottom: 180, left: 170 },
-  { id: "lapin_hyvinvointialue", bottom: 300, left: 140 },
-  { id: "helsingin_kaupunki", bottom: 5, left: 110 },
-  { id: "ahvenanmaa", bottom: 20, left: 10 }
+  { id: "etela-savon_hyvinvointialue", x: 1123.6, y: 2371.2 },
+  { id: "pohjois-karjalan_hyvinvointialue", x: 1496.9, y: 2024.7 },
+  { id: "kainuun_hyvinvointialue", x: 1280.8, y: 1590.7 },
+  { id: "pohjois-pohjanmaan_hyvinvointialue", x: 884.6, y: 1641.4 },
+  { id: "pohjois-savon_hyvinvointialue", x: 1127.1, y: 1921.7 },
+  { id: "keski-suomen_hyvinvointialue", x: 875.8, y: 2161.1 },
+  { id: "etela-karjalan_hyvinvointialue", x: 1210, y: 2544.6 },
+  { id: "kymenlaakson_hyvinvointialue", x: 1060, y: 2633.9 },
+  { id: "lansi-uudenmaan_hyvinvointialue", x: 682.3, y: 2756.8 },
+  { id: "paijat-hameen_hyvinvointialue", x: 911.9, y: 2487.3 },
+  { id: "kanta-hameen_hyvinvointialue", x: 723.3, y: 2586.8 },
+  { id: "pirkanmaan_hyvinvointialue", x: 637.8, y: 2378 },
+  { id: "lapin_hyvinvointialue", x: 1020.8, y: 804.9 },
+  { id: "etela-pohjanmaan_hyvinvointialue", x: 614.5, y: 2033.7 },
+  { id: "keski-pohjanmaan_hyvinvointialue", x: 725, y: 1857.4 },
+  { id: "pohjanmaan_hyvinvointialue", x: 566.2, y: 1837.5 },
+  { id: "satakunnan_hyvinvointialue", x: 424.6, y: 2337.1 },
+  { id: "varsinais-suomen_hyvinvointialue", x: 479.4, y: 2642.4 },
+  { id: "ahvenanmaa", x: 72.9, y: 2750.4 },
+  { id: "helsingin_kaupunki", x: 785.6, y: 2779.7 },
+  { id: "vantaan_ja_keravan_hyvinvointialue", x: 778.7, y: 2754.6 },
+  { id: "ita-uudenmaan_hyvinvointialue", x: 965.2, y: 2686.9 },
+  { id: "keski-uudenmaan_hyvinvointialue", x: 786.7, y: 2694.3 }
+];
+var WITHOUT_INSET = {
+  helsingin_kaupunki: { x: 785.6, y: 2830 }
+};
+var CAPITAL_REGION = ["helsingin_kaupunki", "vantaan_ja_keravan_hyvinvointialue", "keski-uudenmaan_hyvinvointialue"];
+var INSET_VIEW_BOX = "718.8 2593.1 169.3 237.7";
+var INSET_COUNTIES = [
+  "lansi-uudenmaan_hyvinvointialue",
+  "paijat-hameen_hyvinvointialue",
+  "kanta-hameen_hyvinvointialue",
+  "helsingin_kaupunki",
+  "vantaan_ja_keravan_hyvinvointialue",
+  "ita-uudenmaan_hyvinvointialue",
+  "keski-uudenmaan_hyvinvointialue"
 ];
 
 // src/trend.ts
-var DAY = 24 * 60 * 60 * 1e3;
+var HALF_DAY = 12 * 60 * 60 * 1e3;
 function weekStart(moment) {
   const date = new Date(moment);
-  const sinceMonday = (date.getDay() + 6) % 7;
   date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() - sinceMonday);
+  date.setDate(date.getDate() - (date.getDay() + 6) % 7);
+  return date.getTime();
+}
+function weeksBefore(moment, weeks) {
+  const date = new Date(moment);
+  date.setDate(date.getDate() - 7 * weeks);
   return date.getTime();
 }
 function isoWeek(moment) {
@@ -1250,25 +1311,57 @@ function isoWeek(moment) {
   date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
   const firstThursday = new Date(date.getFullYear(), 0, 4);
   firstThursday.setDate(firstThursday.getDate() + 3 - (firstThursday.getDay() + 6) % 7);
-  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * DAY));
+  return 1 + Math.round((date.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1e3));
 }
-function weeklyPoints(rows, weeks) {
+function weeklyPoints(rows, weeks, now = Date.now()) {
+  const running = weekStart(now);
   const byWeek = /* @__PURE__ */ new Map();
   for (const row of rows) {
     if (row.mean === null || row.mean === void 0) {
       continue;
     }
     const start = typeof row.start === "number" ? row.start : Date.parse(row.start);
-    const week = weekStart(start);
-    byWeek.set(week, { week, value: row.mean });
+    const week = weekStart(start + HALF_DAY);
+    if (week < running) {
+      byWeek.set(week, row.mean);
+    }
   }
-  return [...byWeek.values()].sort((a3, b3) => a3.week - b3.week).slice(-weeks);
+  return [...byWeek.entries()].sort(([a3], [b3]) => a3 - b3).slice(-weeks).map(([week, value]) => ({ week: isoWeek(weeksBefore(week, 1)), value }));
+}
+function weeksAfter(week, other) {
+  const ahead = ((week - other) % 53 + 53) % 53;
+  return ahead > 26 ? ahead - 53 : ahead;
+}
+function withCurrent(points, week, value, weeks) {
+  if (week === void 0) {
+    return points;
+  }
+  const known = points.filter((point) => weeksAfter(point.week, week) <= 0);
+  if (value === void 0 || known.at(-1)?.week === week) {
+    return known;
+  }
+  return [...known, { week, value }].slice(-weeks);
+}
+async function fetchYearAgo(hass, statisticId, week, now = Date.now()) {
+  if (!hass.callWS) {
+    return void 0;
+  }
+  const end = weeksBefore(weekStart(now), 50);
+  const result = await hass.callWS({
+    type: "recorder/statistics_during_period",
+    start_time: new Date(weeksBefore(weekStart(now), 55)).toISOString(),
+    end_time: new Date(end).toISOString(),
+    statistic_ids: [statisticId],
+    period: "day",
+    types: ["mean"]
+  });
+  return weeklyPoints(result[statisticId] ?? [], 5, end).find((point) => point.week === week)?.value;
 }
 async function fetchTrend(hass, statisticId, weeks, now = Date.now()) {
   if (!hass.callWS) {
     return [];
   }
-  const start = new Date(weekStart(now) - weeks * 7 * DAY).toISOString();
+  const start = new Date(weeksBefore(weekStart(now), weeks)).toISOString();
   const result = await hass.callWS({
     type: "recorder/statistics_during_period",
     start_time: start,
@@ -1276,11 +1369,28 @@ async function fetchTrend(hass, statisticId, weeks, now = Date.now()) {
     period: "day",
     types: ["mean"]
   });
-  return weeklyPoints(result[statisticId] ?? [], weeks);
+  return weeklyPoints(result[statisticId] ?? [], weeks, now);
 }
 
 // src/thl-card.ts
 var TREND_WEEKS = 26;
+var [, , VIEW_WIDTH, VIEW_HEIGHT] = MAP_VIEW_BOX.split(" ").map(Number);
+var [FRAME_X, FRAME_Y, FRAME_WIDTH, FRAME_HEIGHT] = INSET_VIEW_BOX.split(" ").map(Number);
+var RETRY = 60 * 1e3;
+function numberLocale(hass, language) {
+  switch (hass?.locale?.number_format) {
+    case "comma_decimal":
+      return "en-US";
+    case "decimal_comma":
+      return "de";
+    case "space_comma":
+      return "fr";
+    case "system":
+      return void 0;
+    default:
+      return language;
+  }
+}
 console.info(
   `%c  THL-CARD  
 %c  ${CARD_VERSION}    `,
@@ -1300,6 +1410,7 @@ var ThlCard = class extends i4 {
   constructor() {
     super(...arguments);
     this.trend = [];
+    this.shown = 0;
   }
   static getConfigElement() {
     return document.createElement("thl-card-editor");
@@ -1309,8 +1420,12 @@ var ThlCard = class extends i4 {
     return { entity: (hass ? cardEntities(hass)[0] : void 0) ?? "" };
   }
   setConfig(config) {
-    if (!config || !config.entity) {
+    const entities = [config?.entity ?? []].flat().filter(Boolean);
+    if (entities.length === 0) {
       throw new Error(translate(browserLanguage(), "invalid_configuration"));
+    }
+    if (this.config === void 0 || String(entities) !== String(this.entities())) {
+      this.shown = 0;
     }
     if (this.config?.default_area !== config.default_area || this.config === void 0) {
       this.selected = config.default_area || void 0;
@@ -1324,20 +1439,35 @@ var ThlCard = class extends i4 {
   getGridOptions() {
     return { columns: 12, rows: "auto", min_columns: 6 };
   }
+  connectedCallback() {
+    super.connectedCallback();
+    if (this.hass && (this.trendKey === void 0 || this.yearAgoKey === void 0)) {
+      this.requestUpdate();
+    }
+  }
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.retry !== void 0) {
+      window.clearTimeout(this.retry);
+      this.retry = void 0;
+      this.trendKey = void 0;
+      this.yearAgoKey = void 0;
+    }
+  }
   shouldUpdate(changed) {
-    if (changed.has("config") || changed.has("selected") || changed.has("trend") || changed.has("hovered") || !this.config) {
+    if ([...changed.keys()].some((key) => key !== "hass") || !this.config) {
       return true;
     }
     const previous = changed.get("hass");
-    return !previous || previous.states[this.config.entity] !== this.hass?.states[this.config.entity];
+    return !previous || this.entities().some((id) => previous.states[id] !== this.hass?.states[id]) || previous.locale !== this.hass?.locale || previous.language !== this.hass?.language;
   }
   render() {
     if (!this.hass || !this.config) {
       return A;
     }
-    const entity = this.hass.states[this.config.entity];
+    const entity = this.hass.states[this.sensorId()];
     if (!entity) {
-      return this.message(this.text("entity_not_found", { entity: this.config.entity }));
+      return this.message(this.text("entity_not_found", { entity: this.sensorId() }));
     }
     if (entity.state === "unavailable" || entity.state === "unknown") {
       return this.message(this.text("unavailable"));
@@ -1348,40 +1478,66 @@ var ThlCard = class extends i4 {
     const title = selected?.name ?? this.text("whole_country");
     return b2`
             <ha-card>
-                <div class="card ${this.wide ? "wide" : ""}">
+                <div class="card">
                     <div class="disease">
                         ${DISEASE_LOGO}
                         <span class="disease-name">${this.name(entity.attributes)}</span>
                     </div>
+                    ${this.chips()}
                     <div class="body">
                         ${this.map(areas, whole)}
                         <div class="side">
                             <div class="figures">
                                 ${isVisits(areas) ? this.visits(title, selected ?? whole) : this.stats(title, selected ?? whole)}
                             </div>
+                            ${this.showInset ? this.inset(areas, whole) : A}
                         </div>
                     </div>
-                    ${this.trendLine()}
+                    ${this.config.show_key === false ? A : this.key(areas)} ${this.trendLine()}
                 </div>
             </ha-card>
         `;
   }
   updated() {
     void this.refreshTrend();
+    void this.refreshYearAgo();
+  }
+  /** The configured sensors, one or several. */
+  entities() {
+    return [this.config?.entity ?? []].flat().filter(Boolean);
+  }
+  sensorId() {
+    const entities = this.entities();
+    return entities[Math.min(this.shown, entities.length - 1)] ?? "";
+  }
+  get showInset() {
+    return this.config?.show_inset !== false;
+  }
+  /** A button for each sensor when there are several, to switch between them. The chosen county stays chosen. */
+  chips() {
+    const entities = this.entities();
+    if (entities.length < 2) {
+      return A;
+    }
+    return b2`
+            <div class="chips">
+                ${entities.map((id, index) => {
+      const attributes = this.hass?.states[id]?.attributes;
+      return b2`<button
+                        class="chip ${index === this.shown ? "on" : ""}"
+                        aria-pressed="${index === this.shown ? "true" : "false"}"
+                        @click=${() => this.shown = index}
+                    >
+                        ${attributes ? this.name(attributes) : id}
+                    </button>`;
+    })}
+            </div>
+        `;
   }
   /** The disease, or the flu-like illness visits, which have no disease and go by their sensor's name. */
   name(attributes) {
     const disease = attributes.disease_name;
     return disease ?? String(attributes.friendly_name ?? "").replace(/^THL\s+/, "");
-  }
-  /**
-   * A card a whole section wide puts its figures beside the map, over the sea west of it, so it isn't
-   * taller than it needs to be. Narrower cards keep them under the map. A card not resized is as wide
-   * as the section.
-   */
-  get wide() {
-    const columns = this.config?.grid_options?.columns ?? 12;
-    return columns === "full" || Number(columns) >= 12;
   }
   get colorBy() {
     return this.config?.color_by ?? "level";
@@ -1391,40 +1547,93 @@ var ThlCard = class extends i4 {
     const size = width === void 0 ? `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT};` : `aspect-ratio: ${MAP_WIDTH} / ${MAP_HEIGHT}; width: ${width}px; max-width: 100%;`;
     return b2`
             <div class="map" style="${size}">
-                ${COUNTY_LABELS.map(
-      (label) => b2`
-                        <span
-                            class="amount"
-                            style="bottom: ${(label.bottom / MAP_HEIGHT * 100).toFixed(3)}%; left: ${(label.left / MAP_WIDTH * 100).toFixed(3)}%;"
-                        >
-                            ${caseCount(areas, label.id)}
-                        </span>
-                    `
-    )}
+                ${COUNTY_LABELS.filter((label) => !(this.showInset && CAPITAL_REGION.includes(label.id))).map((label) => {
+      const at = !this.showInset && WITHOUT_INSET[label.id] || label;
+      const left = (at.x / VIEW_WIDTH * 100).toFixed(3);
+      const top = (at.y / VIEW_HEIGHT * 100).toFixed(3);
+      return b2`<span class="amount" style="left: ${left}%; top: ${top}%;">${this.count(areas, label.id)}</span>`;
+    })}
                 <svg viewBox="${MAP_VIEW_BOX}" version="1.1" preserveAspectRatio="xMidYMid meet">
                     <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
                         ${OUTLINES.filter((outline) => outline.layer === "under").map((outline) => this.outline(outline))}
-                        ${COUNTIES.map((county) => this.county(county, areas, whole))}
+                        ${COUNTIES.map((county) => this.county(county, areas, whole, true))} ${this.outlineOf(COUNTIES, true)}
                     </g>
                     <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
                         ${OUTLINES.filter((outline) => outline.layer === "over").map((outline) => this.outline(outline))}
                     </g>
+                    ${this.showInset ? w`<rect class="frame" x="${FRAME_X}" y="${FRAME_Y}" width="${FRAME_WIDTH}" height="${FRAME_HEIGHT}" rx="6" />` : A}
                 </svg>
             </div>
         `;
   }
-  county(county, areas, whole) {
+  /**
+   * The chosen county's outline, drawn after every county so its neighbours don't cover it. A copy of the shape, so
+   * the counties keep their order and the one the keyboard is on stays the one it chose.
+   */
+  outlineOf(counties, onMap) {
+    const county = counties.find((shape) => shape.id === this.selected);
+    if (county === void 0) {
+      return A;
+    }
+    const small = onMap && CAPITAL_REGION.includes(county.id) ? "small" : "";
+    return w`<path class="selected-outline ${small}" d="${county.d}" transform="${o6(county.transform)}" />`;
+  }
+  /** A county on the map, which the keyboard reaches too, or its copy in the inset, which only the pointer does. */
+  county(county, areas, whole, onMap) {
+    const area = findArea(areas, county.id);
     return w`<path
-      d="${county.d}"
-      transform="${o6(county.transform)}"
-      style="display:inline;fill:${fillColor(findArea(areas, county.id), this.colorBy, whole)}"
-      id="${county.id}"
-      class="${this.selected === county.id ? "selected" : ""}"
-      @click="${() => this.select(county.id)}" />`;
+            d="${county.d}"
+            transform="${o6(county.transform)}"
+            style="display:inline;fill:${fillColor(area, this.colorBy, whole)}"
+            id="${o6(onMap ? county.id : void 0)}"
+            class="${this.selected === county.id ? "selected" : ""}"
+            tabindex="${o6(onMap ? "0" : void 0)}"
+            role="${o6(onMap ? "button" : void 0)}"
+            aria-label="${o6(onMap ? area?.name ?? county.id : void 0)}"
+            aria-pressed="${o6(onMap ? this.selected === county.id ? "true" : "false" : void 0)}"
+            @click="${() => this.select(county.id)}"
+            @keydown="${(event) => this.press(event, county.id)}"
+        />`;
+  }
+  /**
+   * The capital region again, larger, beside the figures: Helsinki and Vantaa and Kerava are a few pixels each on
+   * the map. The keyboard chooses them on the map, so the inset is hidden from it and from screen readers.
+   */
+  inset(areas, whole) {
+    const counties = COUNTIES.filter((county) => INSET_COUNTIES.includes(county.id));
+    return b2`
+            <div class="inset" aria-hidden="true">
+                <svg viewBox="${INSET_VIEW_BOX}" preserveAspectRatio="xMidYMid meet">
+                    <g transform="${MAP_GROUP_TRANSFORM}">
+                        ${counties.map((county) => this.county(county, areas, whole, false))} ${this.outlineOf(counties, false)}
+                    </g>
+                </svg>
+                ${COUNTY_LABELS.filter((label) => CAPITAL_REGION.includes(label.id)).map((label) => {
+      const left = ((label.x - FRAME_X) / FRAME_WIDTH * 100).toFixed(2);
+      const top = ((label.y - FRAME_Y) / FRAME_HEIGHT * 100).toFixed(2);
+      return b2`<span class="amount" style="left: ${left}%; top: ${top}%;">${this.count(areas, label.id)}</span>`;
+    })}
+                <span class="inset-caption">${this.text("capital_region")}</span>
+            </div>
+        `;
+  }
+  /** What the colours mean, under the map: each colour's bound against the whole country, or of the change. */
+  key(areas) {
+    const change = this.colorBy === "change";
+    const bounds = change ? ["0", "\u221240 %", "\u221210 %", "\xB110 %", "+10 %", "+40 %"] : ["0", `< ${this.number(0.5, 2)}`, `< ${this.number(0.8, 2)}`, "\u2248 1", `> ${this.number(1.25, 2)}`, "> 2"];
+    const caption = change ? "key_change" : isVisits(areas) ? "key_share" : "key_level";
+    return b2`
+            <div class="key">
+                <div class="swatches">
+                    ${[NO_CASES, FALLING_FAST, FALLING, STEADY, RISING, RISING_FAST].map((color) => b2`<span style="background: ${color}"></span>`)}
+                </div>
+                <div class="bounds">${bounds.map((bound) => b2`<span>${bound}</span>`)}</div>
+                <span class="key-caption">${this.text(caption)}</span>
+            </div>
+        `;
   }
   outline(outline) {
-    return w`<path id="${outline.id}" style="${outline.style}" d="${outline.d}"
-      transform="${o6(outline.transform)}" />`;
+    return w`<path id="${outline.id}" style="${outline.style}" d="${outline.d}" transform="${o6(outline.transform)}" />`;
   }
   stats(title, area) {
     if (area === void 0) {
@@ -1433,12 +1642,15 @@ var ThlCard = class extends i4 {
     return b2`
             <div class="stats-container">
                 <span class="stats-title">${title}</span>
-                <span class="stats">${this.text("last_week")}: ${area.amount_last_week}</span>
+                <span class="stats">${this.text("last_week")}: ${this.number(area.amount_last_week ?? 0, 0)}</span>
                 ${area.incidence_last_week === void 0 ? A : b2`<span class="stats">
-                              ${this.text("incidence")}: ${this.number(area.incidence_last_week, 1)} / 100 000
+                              ${this.text("incidence")}: <span class="unit">${this.number(area.incidence_last_week, 1)} / 100 000</span>
                           </span>`}
-                ${area.amount_two_weeks_ago === void 0 ? A : b2`<span class="stats">${this.text("two_weeks_ago")}: ${area.amount_two_weeks_ago}</span>`}
-                ${area.change_percentage === void 0 ? A : b2`<span class="stats"> ${this.text("change")}: ${area.change_percentage}% (${area.change_in_numbers}) </span>`}
+                ${area.amount_two_weeks_ago === void 0 ? A : b2`<span class="stats">${this.text("two_weeks_ago")}: ${this.number(area.amount_two_weeks_ago, 0)}</span>`}
+                ${area.change_percentage === void 0 ? A : b2`<span class="stats">
+                              ${this.text("change")}: ${changeText(area)} (${this.number(area.change_in_numbers ?? 0, 0)})
+                          </span>`}
+                ${this.yearAgo === void 0 ? A : b2`<span class="stats">${this.text("last_year")}: ${this.number(this.yearAgo, 0)}</span>`}
             </div>
         `;
   }
@@ -1457,6 +1669,7 @@ var ThlCard = class extends i4 {
                               ${this.number(area.all_visits_last_week ?? 0, 0)}
                           </span>`}
                 ${area.share_two_weeks_ago === void 0 ? A : b2`<span class="stats">${this.text("two_weeks_ago")}: ${share(area.share_two_weeks_ago)}</span>`}
+                ${this.yearAgo === void 0 ? A : b2`<span class="stats">${this.text("last_year")}: ${share(this.yearAgo)}</span>`}
             </div>
         `;
   }
@@ -1472,14 +1685,18 @@ var ThlCard = class extends i4 {
     const y3 = (value) => 28 - value / top * 26;
     const points = values.map((value, index) => `${x2(index).toFixed(2)},${y3(value).toFixed(2)}`).join(" ");
     const digits = isVisits(this.areas()) ? 3 : 1;
-    const marked = this.hovered ?? values.length - 1;
+    const marked = Math.min(this.hovered ?? values.length - 1, values.length - 1);
     const at = `left: ${x2(marked).toFixed(2)}%; top: ${(y3(values[marked]) / 30 * 100).toFixed(2)}%;`;
     return b2`
             <div class="trend">
                 <div
                     class="trend-plot"
+                    tabindex="0"
+                    @pointerdown=${(event) => this.hover(event)}
                     @pointermove=${(event) => this.hover(event)}
-                    @pointerleave=${() => this.hovered = void 0}
+                    @pointerleave=${(event) => this.leave(event)}
+                    @keydown=${(event) => this.step(event)}
+                    @blur=${() => this.hovered = void 0}
                 >
                     <svg viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="${this.text("trend")}">
                         <polyline class="trend-area" points="0,30 ${points} 100,30" />
@@ -1487,7 +1704,7 @@ var ThlCard = class extends i4 {
                     </svg>
                     <span class="trend-dot ${this.hovered === void 0 ? "" : "hovered"}" style="${at}"></span>
                     ${this.hovered === void 0 ? A : b2`<span class="trend-bubble" style="left: ${x2(marked).toFixed(2)}%;">
-                                  ${this.text("week_short")} ${this.dataWeek(marked)}: ${this.number(values[marked], digits)}
+                                  ${this.text("week_short")} ${this.trend[marked].week}: ${this.number(values[marked], digits)}
                               </span>`}
                 </div>
                 <span class="trend-caption">
@@ -1506,37 +1723,53 @@ var ThlCard = class extends i4 {
     const fraction = Math.min(Math.max((event.clientX - box.left) / box.width, 0), 1);
     this.hovered = Math.round(fraction * (this.trend.length - 1));
   }
-  /**
-   * The week a point's figure is from. A figure is shown from the week after its own, so a point is the
-   * week before the one it sits in; the newest point is the figure the sensor shows now.
-   */
-  dataWeek(index) {
-    if (index === this.trend.length - 1) {
-      const week = Number(this.hass?.states[this.config?.entity ?? ""]?.attributes.last_week);
-      if (Number.isFinite(week)) {
-        return week;
-      }
+  /** A touch ends with the finger leaving, so the week it showed stays until the next touch. */
+  leave(event) {
+    if (event.pointerType !== "touch") {
+      this.hovered = void 0;
     }
-    return isoWeek(this.trend[index].week - 7 * 24 * 60 * 60 * 1e3);
   }
-  /** The sensor the trend is drawn from: the level for colouring by level, the cases otherwise. */
+  /** The arrow keys move along the trend, Home and End to its ends. */
+  step(event) {
+    const last = this.trend.length - 1;
+    const current = this.hovered ?? last;
+    const next = { ArrowLeft: current - 1, ArrowRight: current + 1, Home: 0, End: last }[event.key];
+    if (next !== void 0) {
+      event.preventDefault();
+      this.hovered = Math.min(Math.max(next, 0), last);
+    }
+  }
+  press(event, id) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      this.select(id);
+    }
+  }
+  /**
+   * The sensor the trend is drawn from and the figure it shows now: the level for colouring by level, the cases
+   * otherwise. A county of the flu-like illness visits has one sensor, its share.
+   */
   trendSource() {
-    const areas = this.areas();
-    const area = findArea(areas, this.selected ?? WHOLE_COUNTRY);
+    const area = findArea(this.areas(), this.selected ?? WHOLE_COUNTRY);
     if (area === void 0) {
       return void 0;
     }
-    const byLevel = this.colorBy === "level" && level(area) !== void 0;
-    return byLevel && area.incidence_entity_id || area.entity_id || void 0;
+    if (this.colorBy === "level" && area.incidence_entity_id && area.incidence_last_week !== void 0) {
+      return { id: area.incidence_entity_id, value: area.incidence_last_week };
+    }
+    if (!area.entity_id) {
+      return void 0;
+    }
+    const value = isVisits(this.areas()) ? area.share_last_week : area.amount_last_week;
+    return { id: area.entity_id, value: value ?? void 0 };
   }
   async refreshTrend() {
     if (!this.hass || !this.config || this.config.show_trend === false) {
       return;
     }
     const source = this.trendSource();
-    const weeks = TREND_WEEKS;
-    const week = String(this.hass.states[this.config.entity]?.attributes.last_week ?? "");
-    const key = `${source}|${weeks}|${week}`;
+    const week = Number(this.hass.states[this.sensorId()]?.attributes.last_week);
+    const key = `${source?.id}|${week}|${source?.value}`;
     if (key === this.trendKey) {
       return;
     }
@@ -1547,20 +1780,72 @@ var ThlCard = class extends i4 {
       return;
     }
     try {
-      const points = await fetchTrend(this.hass, source, weeks);
+      const points = await fetchTrend(this.hass, source.id, TREND_WEEKS);
       if (this.trendKey === key) {
-        this.trend = points;
+        this.trend = withCurrent(points, Number.isFinite(week) ? week : void 0, source.value, TREND_WEEKS);
       }
     } catch {
-      this.trend = [];
+      if (this.trendKey === key) {
+        this.trend = [];
+        this.retryLater();
+      }
     }
   }
+  /**
+   * Tries the fetches again after a while, such as once the websocket has reconnected. The keys stay until then, so
+   * drawing what is left doesn't ask again straight away.
+   */
+  retryLater() {
+    window.clearTimeout(this.retry);
+    this.retry = window.setTimeout(() => {
+      this.retry = void 0;
+      this.trendKey = void 0;
+      this.yearAgoKey = void 0;
+      this.requestUpdate();
+    }, RETRY);
+  }
+  /** The chosen area's figure of the same week a year ago: its cases, or its share of visits. */
+  async refreshYearAgo() {
+    if (!this.hass || !this.config) {
+      return;
+    }
+    const area = findArea(this.areas(), this.selected ?? WHOLE_COUNTRY);
+    const week = Number(this.hass.states[this.sensorId()]?.attributes.last_week);
+    const key = `${area?.entity_id}|${week}`;
+    if (key === this.yearAgoKey) {
+      return;
+    }
+    this.yearAgoKey = key;
+    this.yearAgo = void 0;
+    if (!area?.entity_id || !Number.isFinite(week)) {
+      return;
+    }
+    try {
+      const value = await fetchYearAgo(this.hass, area.entity_id, week);
+      if (this.yearAgoKey === key) {
+        this.yearAgo = value;
+      }
+    } catch {
+      if (this.yearAgoKey === key) {
+        this.retryLater();
+      }
+    }
+  }
+  /** A county's number on the map, written as the user's number format writes it. */
+  count(areas, id) {
+    const count = caseCount(areas, id);
+    return typeof count === "number" ? this.number(count, 0) : count;
+  }
   areas() {
-    const entity = this.config ? this.hass?.states[this.config.entity] : void 0;
+    const entity = this.config ? this.hass?.states[this.sensorId()] : void 0;
     return entity?.attributes.values ?? [];
   }
   number(value, digits) {
-    return new Intl.NumberFormat(this.language(), { maximumFractionDigits: digits }).format(value);
+    const grouping = this.hass?.locale?.number_format === "none" ? false : void 0;
+    return new Intl.NumberFormat(numberLocale(this.hass, this.language()), {
+      maximumFractionDigits: digits,
+      useGrouping: grouping
+    }).format(value);
   }
   message(text) {
     return b2`<ha-card><div class="message">${text}</div></ha-card>`;
@@ -1580,6 +1865,10 @@ var ThlCard = class extends i4 {
                 display: block;
             }
 
+            ha-card {
+                container: thl / inline-size;
+            }
+
             .card {
                 container-type: inline-size;
                 display: flex;
@@ -1595,8 +1884,7 @@ var ThlCard = class extends i4 {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                /* The drawing and the gap are sized from this, so the whole row keeps
-           its proportions at every width. */
+                /* The drawing and the gap are sized from this, so the whole row keeps its proportions at every width. */
                 font-size: clamp(11px, 5.5cqw, 18px);
                 gap: 0.5em;
                 max-width: 100%;
@@ -1642,19 +1930,151 @@ var ThlCard = class extends i4 {
                 opacity: 0.4;
             }
 
-            .map path.selected {
-                opacity: 0.5;
+            /* The chosen county keeps its colour, which means something, and gets an outline instead. */
+            .selected-outline {
+                fill: none;
+                stroke: var(--primary-text-color);
+                stroke-width: 2.5px;
+                vector-effect: non-scaling-stroke;
+                pointer-events: none;
             }
 
+            /* On the map the capital region's counties are too small for a thick line; the inset shows it. */
+            .selected-outline.small {
+                stroke-width: 1px;
+            }
+
+            .map path:focus {
+                outline: none;
+            }
+
+            .map path:focus-visible {
+                stroke: var(--primary-color);
+                stroke-width: 3px;
+                vector-effect: non-scaling-stroke;
+            }
+
+            /* Each number is centred on its county, in dark text, which reads on every colour of the map in both themes. */
             .amount {
-                color: var(--primary-text-color);
                 position: absolute;
+                transform: translate(-50%, -50%);
+                color: #1a1a1a;
+                font-weight: 600;
                 /* The numbers lie on top of the shapes, so let the clicks through to the county beneath. */
                 pointer-events: none;
-                text-shadow: 1px 1px 2px black;
-                /* 9px when the map is its original 235px wide, and in proportion after that. */
-                font-size: 9px;
-                font-size: 3.83cqw;
+                /* 8.5px when the map is its original 235px wide, and in proportion after that, but never too small to read. */
+                font-size: 8.5px;
+                font-size: max(7.5px, 3.6cqw);
+                white-space: nowrap;
+            }
+
+            .frame {
+                fill: none;
+                stroke: var(--secondary-text-color);
+                stroke-width: 1px;
+                stroke-dasharray: 3 2;
+                vector-effect: non-scaling-stroke;
+                pointer-events: none;
+            }
+
+            .inset {
+                position: relative;
+                container-type: inline-size;
+                flex: 0 0 auto;
+                width: 112px;
+                border: 1px dashed var(--secondary-text-color);
+                border-radius: 6px;
+                overflow: hidden;
+            }
+
+            .inset svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+
+            .inset path {
+                cursor: pointer;
+            }
+
+            .inset path:hover {
+                opacity: 0.7;
+            }
+
+            .inset .amount {
+                font-size: 11px;
+            }
+
+            .inset-caption {
+                position: absolute;
+                inset: 0 0 auto;
+                padding: 1px 0;
+                text-align: center;
+                /* Smaller in a small inset, so the name fits. */
+                font-size: min(10px, 11cqw);
+                white-space: nowrap;
+                color: var(--secondary-text-color);
+                background: color-mix(in srgb, var(--card-background-color, #fff) 85%, transparent);
+                pointer-events: none;
+            }
+
+            .key {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                width: min(100%, 300px);
+                font-size: 10px;
+                color: var(--secondary-text-color);
+            }
+
+            .swatches,
+            .bounds {
+                display: flex;
+                width: 100%;
+            }
+
+            .swatches {
+                height: 8px;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .swatches span,
+            .bounds span {
+                flex: 1;
+                text-align: center;
+                white-space: nowrap;
+            }
+
+            /* No cases at all is a colour of its own, apart from the scale. */
+            .swatches span:first-child,
+            .bounds span:first-child {
+                margin-right: 3px;
+            }
+
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .chip {
+                font: inherit;
+                font-size: 12px;
+                padding: 3px 10px;
+                border-radius: 14px;
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+                background: none;
+                color: var(--primary-text-color);
+                cursor: pointer;
+            }
+
+            .chip.on {
+                background: var(--primary-color);
+                border-color: var(--primary-color);
+                color: var(--text-primary-color, #fff);
             }
 
             .figures {
@@ -1668,6 +2088,11 @@ var ThlCard = class extends i4 {
                 flex-direction: column;
                 align-items: center;
                 text-align: center;
+            }
+
+            /* A figure and its unit stay on one line. */
+            .unit {
+                white-space: nowrap;
             }
 
             .stats-title {
@@ -1686,57 +2111,14 @@ var ThlCard = class extends i4 {
                 width: 100%;
             }
 
+            /* The figures, and the inset beside them when there is room, under them when not. */
             .side {
                 display: flex;
-                flex-direction: column;
+                flex-wrap: wrap;
+                justify-content: center;
                 align-items: center;
-                gap: 12px;
+                gap: 12px 20px;
                 width: 100%;
-            }
-
-            /* A whole section wide: the map to the right, the figures over the sea west of it. */
-            .wide .body {
-                position: relative;
-                align-items: flex-end;
-            }
-
-            .wide .map {
-                width: min(68%, 300px);
-            }
-
-            .wide .side {
-                position: absolute;
-                left: 0;
-                top: 30%;
-                width: 50%;
-                align-items: flex-start;
-                /* Only the figures take the pointer; the counties under the rest stay clickable. */
-                pointer-events: none;
-            }
-
-            .wide .side > * {
-                pointer-events: auto;
-            }
-
-            .wide.card {
-                padding: 12px 25px;
-            }
-
-            .wide .disease {
-                font-size: clamp(11px, 5.5cqw, 20px);
-            }
-
-            .wide .trend {
-                width: 100%;
-            }
-
-            .wide .figures {
-                justify-content: flex-start;
-            }
-
-            .wide .stats-container {
-                align-items: flex-start;
-                text-align: left;
             }
 
             .trend {
@@ -1752,6 +2134,18 @@ var ThlCard = class extends i4 {
                 width: 100%;
                 height: 40px;
                 cursor: crosshair;
+                /* A finger drawn sideways moves along the trend, up and down it still scrolls the page. */
+                touch-action: pan-y;
+                border-radius: 4px;
+            }
+
+            .trend-plot:focus {
+                outline: none;
+            }
+
+            .trend-plot:focus-visible {
+                outline: 2px solid var(--primary-color);
+                outline-offset: 4px;
             }
 
             .trend svg {
@@ -1809,6 +2203,68 @@ var ThlCard = class extends i4 {
                 color: var(--secondary-text-color);
             }
 
+            /* From a whole section of four in a view on down to a third of one of two: the map to the right, the figures over
+               the sea west of it, so the card isn't taller than it needs to be. Narrower, the figures stay under the map. */
+            @container thl (min-width: 290px) {
+                /* However wide the card, the map and the figures stay together in the middle. */
+                .body,
+                .trend,
+                .key {
+                    width: 100%;
+                    max-width: 560px;
+                }
+
+                .body {
+                    position: relative;
+                    align-items: flex-end;
+                }
+
+                .map {
+                    width: min(68%, 300px);
+                }
+
+                .side {
+                    position: absolute;
+                    left: 0;
+                    top: 16%;
+                    bottom: 0;
+                    width: 50%;
+                    flex-direction: column;
+                    flex-wrap: nowrap;
+                    justify-content: flex-start;
+                    align-items: flex-start;
+                    /* Only the figures take the pointer; the counties under the rest stay clickable. */
+                    pointer-events: none;
+                }
+
+                .side > * {
+                    pointer-events: auto;
+                }
+
+                .card {
+                    padding: 12px 16px;
+                }
+
+                .disease {
+                    font-size: clamp(11px, 5.5cqw, 20px);
+                }
+
+                /* At the bottom of the column, clear of the map, which is to the right of it. */
+                .inset {
+                    margin-top: auto;
+                    width: clamp(84px, 60%, 140px);
+                }
+
+                .figures {
+                    justify-content: flex-start;
+                }
+
+                .stats-container {
+                    align-items: flex-start;
+                    text-align: left;
+                }
+            }
+
             .message {
                 padding: 16px;
                 color: var(--primary-text-color);
@@ -1831,6 +2287,12 @@ __decorateClass([
 __decorateClass([
   r5()
 ], ThlCard.prototype, "hovered", 2);
+__decorateClass([
+  r5()
+], ThlCard.prototype, "shown", 2);
+__decorateClass([
+  r5()
+], ThlCard.prototype, "yearAgo", 2);
 ThlCard = __decorateClass([
   t3("thl-card")
 ], ThlCard);

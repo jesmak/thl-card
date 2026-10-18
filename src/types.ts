@@ -4,7 +4,8 @@ import type { LovelaceCardConfig } from "./hass";
 export type ColorBy = "level" | "change";
 
 export interface ThlCardConfig extends LovelaceCardConfig {
-    entity: string;
+    /** The whole country's sensor of a disease, or several, which the card switches between with buttons over the map. */
+    entity: string | string[];
     /** A fixed width for the map in pixels. Left out, the map follows the width of the card. */
     map_width?: number;
     /** How the counties are coloured. Left out, by level. */
@@ -13,6 +14,10 @@ export interface ThlCardConfig extends LovelaceCardConfig {
     default_area?: string;
     /** Whether a trend of the chosen area's past six months is drawn with its figures. Left out, it is. */
     show_trend?: boolean;
+    /** Whether the capital region, too small to point at on the map, is drawn again larger. Left out, it is. */
+    show_inset?: boolean;
+    /** Whether a key under the map says what the colours mean. Left out, it does. */
+    show_key?: boolean;
 }
 
 /**

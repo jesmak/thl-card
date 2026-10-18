@@ -10,7 +10,19 @@ import type { CSSResultGroup, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 
-import { caseCount, fillColor, findArea, isVisits, level } from "./areas";
+import {
+    caseCount,
+    changeText,
+    FALLING,
+    FALLING_FAST,
+    fillColor,
+    findArea,
+    isVisits,
+    NO_CASES,
+    RISING,
+    RISING_FAST,
+    STEADY,
+} from "./areas";
 import { cardEntities } from "./editor";
 import { CARD_VERSION, WHOLE_COUNTRY } from "./const";
 import type { HomeAssistant } from "./hass";
@@ -18,13 +30,35 @@ import { browserLanguage, translate } from "./localize/localize";
 import { DISEASE_LOGO } from "./logos";
 import { COUNTIES, MAP_GROUP_TRANSFORM, MAP_HEIGHT, MAP_VIEW_BOX, MAP_WIDTH, OUTLINES } from "./map/counties";
 import type { CountyShape, Outline } from "./map/counties";
-import { COUNTY_LABELS } from "./map/labels";
-import { fetchTrend, isoWeek } from "./trend";
+import { CAPITAL_REGION, COUNTY_LABELS, INSET_COUNTIES, INSET_VIEW_BOX, WITHOUT_INSET } from "./map/labels";
+import { fetchTrend, fetchYearAgo, withCurrent } from "./trend";
 import type { TrendPoint } from "./trend";
 import type { Area, ColorBy, ThlCardConfig } from "./types";
 
-/** The trend covers six months, which is what the integration keeps of the past when a sensor is new. */
+/** The trend covers six months. */
 const TREND_WEEKS = 26;
+const [, , VIEW_WIDTH, VIEW_HEIGHT] = MAP_VIEW_BOX.split(" ").map(Number);
+/** The capital region's frame on the map, around what the inset shows. */
+const [FRAME_X, FRAME_Y, FRAME_WIDTH, FRAME_HEIGHT] = INSET_VIEW_BOX.split(" ").map(Number);
+
+/** A trend that couldn't be fetched, such as while the websocket reconnects, is tried again after this long. */
+const RETRY = 60 * 1000;
+
+/** The locale Home Assistant's number format setting asks for, as its own frontend reads it. */
+function numberLocale(hass: HomeAssistant | undefined, language: string): string | undefined {
+    switch (hass?.locale?.number_format) {
+        case "comma_decimal":
+            return "en-US";
+        case "decimal_comma":
+            return "de";
+        case "space_comma":
+            return "fr";
+        case "system":
+            return undefined;
+        default:
+            return language;
+    }
+}
 
 console.info(
     `%c  THL-CARD  \n%c  ${CARD_VERSION}    `,
@@ -58,8 +92,14 @@ export class ThlCard extends LitElement {
     @state() private trend: TrendPoint[] = [];
     /** The point of the trend the pointer is over. */
     @state() private hovered?: number;
+    /** Which of the configured sensors is shown, when there are several. */
+    @state() private shown = 0;
+    /** The chosen area's figure of the same week a year ago, when the statistics reach that far. */
+    @state() private yearAgo?: number;
     /** What the trend shown was fetched for, so it is fetched again only when that changes. */
     private trendKey?: string;
+    private yearAgoKey?: string;
+    private retry?: number;
 
     public static getConfigElement(): HTMLElement {
         return document.createElement("thl-card-editor");
@@ -71,8 +111,13 @@ export class ThlCard extends LitElement {
     }
 
     public setConfig(config: ThlCardConfig): void {
-        if (!config || !config.entity) {
+        const entities = [config?.entity ?? []].flat().filter(Boolean);
+        if (entities.length === 0) {
             throw new Error(translate(browserLanguage(), "invalid_configuration"));
+        }
+        // A changed list of sensors starts again from its first.
+        if (this.config === undefined || String(entities) !== String(this.entities())) {
+            this.shown = 0;
         }
         // The default county is chosen whenever the card loads or its configuration changes.
         if (this.config?.default_area !== config.default_area || this.config === undefined) {
@@ -90,13 +135,37 @@ export class ThlCard extends LitElement {
         return { columns: 12, rows: "auto", min_columns: 6 };
     }
 
+    public connectedCallback(): void {
+        super.connectedCallback();
+        // Back on the page, such as after a change of view: a fetch left waiting is tried now.
+        if (this.hass && (this.trendKey === undefined || this.yearAgoKey === undefined)) {
+            this.requestUpdate();
+        }
+    }
+
+    public disconnectedCallback(): void {
+        super.disconnectedCallback();
+        // A fetch waiting to be tried again is tried when the card is shown again instead.
+        if (this.retry !== undefined) {
+            window.clearTimeout(this.retry);
+            this.retry = undefined;
+            this.trendKey = undefined;
+            this.yearAgoKey = undefined;
+        }
+    }
+
     protected shouldUpdate(changed: PropertyValues): boolean {
-        if (changed.has("config") || changed.has("selected") || changed.has("trend") || changed.has("hovered") || !this.config) {
+        if ([...changed.keys()].some((key) => key !== "hass") || !this.config) {
             return true;
         }
         const previous = changed.get("hass") as HomeAssistant | undefined;
-        // Redraw whenever the sensor itself changed, not only when the week did.
-        return !previous || previous.states[this.config.entity] !== this.hass?.states[this.config.entity];
+        // Redraw whenever a sensor itself changed, not only when the week did, and when the language or number format did.
+        return (
+            !previous ||
+            this.entities().some((id) => previous.states[id] !== this.hass?.states[id]) ||
+            previous.locale !== this.hass?.locale ||
+            previous.language !== this.hass?.language
+        );
     }
 
     protected render(): TemplateResult | typeof nothing {
@@ -104,9 +173,9 @@ export class ThlCard extends LitElement {
             return nothing;
         }
 
-        const entity = this.hass.states[this.config.entity];
+        const entity = this.hass.states[this.sensorId()];
         if (!entity) {
-            return this.message(this.text("entity_not_found", { entity: this.config.entity }));
+            return this.message(this.text("entity_not_found", { entity: this.sensorId() }));
         }
         if (entity.state === "unavailable" || entity.state === "unknown") {
             return this.message(this.text("unavailable"));
@@ -119,20 +188,22 @@ export class ThlCard extends LitElement {
 
         return html`
             <ha-card>
-                <div class="card ${this.wide ? "wide" : ""}">
+                <div class="card">
                     <div class="disease">
                         ${DISEASE_LOGO}
                         <span class="disease-name">${this.name(entity.attributes)}</span>
                     </div>
+                    ${this.chips()}
                     <div class="body">
                         ${this.map(areas, whole)}
                         <div class="side">
                             <div class="figures">
                                 ${isVisits(areas) ? this.visits(title, selected ?? whole) : this.stats(title, selected ?? whole)}
                             </div>
+                            ${this.showInset ? this.inset(areas, whole) : nothing}
                         </div>
                     </div>
-                    ${this.trendLine()}
+                    ${this.config.show_key === false ? nothing : this.key(areas)} ${this.trendLine()}
                 </div>
             </ha-card>
         `;
@@ -140,22 +211,49 @@ export class ThlCard extends LitElement {
 
     protected updated(): void {
         void this.refreshTrend();
+        void this.refreshYearAgo();
+    }
+
+    /** The configured sensors, one or several. */
+    private entities(): string[] {
+        return [this.config?.entity ?? []].flat().filter(Boolean);
+    }
+
+    private sensorId(): string {
+        const entities = this.entities();
+        return entities[Math.min(this.shown, entities.length - 1)] ?? "";
+    }
+
+    private get showInset(): boolean {
+        return this.config?.show_inset !== false;
+    }
+
+    /** A button for each sensor when there are several, to switch between them. The chosen county stays chosen. */
+    private chips(): TemplateResult | typeof nothing {
+        const entities = this.entities();
+        if (entities.length < 2) {
+            return nothing;
+        }
+        return html`
+            <div class="chips">
+                ${entities.map((id, index) => {
+                    const attributes = this.hass?.states[id]?.attributes;
+                    return html`<button
+                        class="chip ${index === this.shown ? "on" : ""}"
+                        aria-pressed="${index === this.shown ? "true" : "false"}"
+                        @click=${() => (this.shown = index)}
+                    >
+                        ${attributes ? this.name(attributes) : id}
+                    </button>`;
+                })}
+            </div>
+        `;
     }
 
     /** The disease, or the flu-like illness visits, which have no disease and go by their sensor's name. */
     private name(attributes: Record<string, unknown>): string {
         const disease = attributes.disease_name as string | undefined;
         return disease ?? String(attributes.friendly_name ?? "").replace(/^THL\s+/, "");
-    }
-
-    /**
-     * A card a whole section wide puts its figures beside the map, over the sea west of it, so it isn't
-     * taller than it needs to be. Narrower cards keep them under the map. A card not resized is as wide
-     * as the section.
-     */
-    private get wide(): boolean {
-        const columns = (this.config?.grid_options as { columns?: number | string } | undefined)?.columns ?? 12;
-        return columns === "full" || Number(columns) >= 12;
     }
 
     private get colorBy(): ColorBy {
@@ -171,45 +269,104 @@ export class ThlCard extends LitElement {
 
         return html`
             <div class="map" style="${size}">
-                ${COUNTY_LABELS.map(
-                    (label) => html`
-                        <span
-                            class="amount"
-                            style="bottom: ${((label.bottom / MAP_HEIGHT) * 100).toFixed(3)}%; left: ${(
-                                (label.left / MAP_WIDTH) *
-                                100
-                            ).toFixed(3)}%;"
-                        >
-                            ${caseCount(areas, label.id)}
-                        </span>
-                    `,
-                )}
+                ${COUNTY_LABELS.filter((label) => !(this.showInset && CAPITAL_REGION.includes(label.id))).map((label) => {
+                    const at = (!this.showInset && WITHOUT_INSET[label.id]) || label;
+                    const left = ((at.x / VIEW_WIDTH) * 100).toFixed(3);
+                    const top = ((at.y / VIEW_HEIGHT) * 100).toFixed(3);
+                    return html`<span class="amount" style="left: ${left}%; top: ${top}%;">${this.count(areas, label.id)}</span>`;
+                })}
                 <svg viewBox="${MAP_VIEW_BOX}" version="1.1" preserveAspectRatio="xMidYMid meet">
                     <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
                         ${OUTLINES.filter((outline) => outline.layer === "under").map((outline) => this.outline(outline))}
-                        ${COUNTIES.map((county) => this.county(county, areas, whole))}
+                        ${COUNTIES.map((county) => this.county(county, areas, whole, true))} ${this.outlineOf(COUNTIES, true)}
                     </g>
                     <g style="display:inline" transform="${MAP_GROUP_TRANSFORM}">
                         ${OUTLINES.filter((outline) => outline.layer === "over").map((outline) => this.outline(outline))}
                     </g>
+                    ${
+                        this.showInset
+                            ? svg`<rect class="frame" x="${FRAME_X}" y="${FRAME_Y}" width="${FRAME_WIDTH}" height="${FRAME_HEIGHT}" rx="6" />`
+                            : nothing
+                    }
                 </svg>
             </div>
         `;
     }
 
-    private county(county: CountyShape, areas: Area[], whole: Area | undefined) {
+    /**
+     * The chosen county's outline, drawn after every county so its neighbours don't cover it. A copy of the shape, so
+     * the counties keep their order and the one the keyboard is on stays the one it chose.
+     */
+    private outlineOf(counties: CountyShape[], onMap: boolean) {
+        const county = counties.find((shape) => shape.id === this.selected);
+        if (county === undefined) {
+            return nothing;
+        }
+        const small = onMap && CAPITAL_REGION.includes(county.id) ? "small" : "";
+        return svg`<path class="selected-outline ${small}" d="${county.d}" transform="${ifDefined(county.transform)}" />`;
+    }
+
+    /** A county on the map, which the keyboard reaches too, or its copy in the inset, which only the pointer does. */
+    private county(county: CountyShape, areas: Area[], whole: Area | undefined, onMap: boolean) {
+        const area = findArea(areas, county.id);
         return svg`<path
-      d="${county.d}"
-      transform="${ifDefined(county.transform)}"
-      style="display:inline;fill:${fillColor(findArea(areas, county.id), this.colorBy, whole)}"
-      id="${county.id}"
-      class="${this.selected === county.id ? "selected" : ""}"
-      @click="${() => this.select(county.id)}" />`;
+            d="${county.d}"
+            transform="${ifDefined(county.transform)}"
+            style="display:inline;fill:${fillColor(area, this.colorBy, whole)}"
+            id="${ifDefined(onMap ? county.id : undefined)}"
+            class="${this.selected === county.id ? "selected" : ""}"
+            tabindex="${ifDefined(onMap ? "0" : undefined)}"
+            role="${ifDefined(onMap ? "button" : undefined)}"
+            aria-label="${ifDefined(onMap ? (area?.name ?? county.id) : undefined)}"
+            aria-pressed="${ifDefined(onMap ? (this.selected === county.id ? "true" : "false") : undefined)}"
+            @click="${() => this.select(county.id)}"
+            @keydown="${(event: KeyboardEvent) => this.press(event, county.id)}"
+        />`;
+    }
+
+    /**
+     * The capital region again, larger, beside the figures: Helsinki and Vantaa and Kerava are a few pixels each on
+     * the map. The keyboard chooses them on the map, so the inset is hidden from it and from screen readers.
+     */
+    private inset(areas: Area[], whole: Area | undefined): TemplateResult {
+        const counties = COUNTIES.filter((county) => INSET_COUNTIES.includes(county.id));
+        return html`
+            <div class="inset" aria-hidden="true">
+                <svg viewBox="${INSET_VIEW_BOX}" preserveAspectRatio="xMidYMid meet">
+                    <g transform="${MAP_GROUP_TRANSFORM}">
+                        ${counties.map((county) => this.county(county, areas, whole, false))} ${this.outlineOf(counties, false)}
+                    </g>
+                </svg>
+                ${COUNTY_LABELS.filter((label) => CAPITAL_REGION.includes(label.id)).map((label) => {
+                    const left = (((label.x - FRAME_X) / FRAME_WIDTH) * 100).toFixed(2);
+                    const top = (((label.y - FRAME_Y) / FRAME_HEIGHT) * 100).toFixed(2);
+                    return html`<span class="amount" style="left: ${left}%; top: ${top}%;">${this.count(areas, label.id)}</span>`;
+                })}
+                <span class="inset-caption">${this.text("capital_region")}</span>
+            </div>
+        `;
+    }
+
+    /** What the colours mean, under the map: each colour's bound against the whole country, or of the change. */
+    private key(areas: Area[]): TemplateResult {
+        const change = this.colorBy === "change";
+        const bounds = change
+            ? ["0", "−40 %", "−10 %", "±10 %", "+10 %", "+40 %"]
+            : ["0", `< ${this.number(0.5, 2)}`, `< ${this.number(0.8, 2)}`, "≈ 1", `> ${this.number(1.25, 2)}`, "> 2"];
+        const caption = change ? "key_change" : isVisits(areas) ? "key_share" : "key_level";
+        return html`
+            <div class="key">
+                <div class="swatches">
+                    ${[NO_CASES, FALLING_FAST, FALLING, STEADY, RISING, RISING_FAST].map((color) => html`<span style="background: ${color}"></span>`)}
+                </div>
+                <div class="bounds">${bounds.map((bound) => html`<span>${bound}</span>`)}</div>
+                <span class="key-caption">${this.text(caption)}</span>
+            </div>
+        `;
     }
 
     private outline(outline: Outline) {
-        return svg`<path id="${outline.id}" style="${outline.style}" d="${outline.d}"
-      transform="${ifDefined(outline.transform)}" />`;
+        return svg`<path id="${outline.id}" style="${outline.style}" d="${outline.d}" transform="${ifDefined(outline.transform)}" />`;
     }
 
     private stats(title: string, area: Area | undefined): TemplateResult | typeof nothing {
@@ -219,24 +376,27 @@ export class ThlCard extends LitElement {
         return html`
             <div class="stats-container">
                 <span class="stats-title">${title}</span>
-                <span class="stats">${this.text("last_week")}: ${area.amount_last_week}</span>
+                <span class="stats">${this.text("last_week")}: ${this.number(area.amount_last_week ?? 0, 0)}</span>
                 ${
                     area.incidence_last_week === undefined
                         ? nothing
                         : html`<span class="stats">
-                              ${this.text("incidence")}: ${this.number(area.incidence_last_week, 1)} / 100 000
+                              ${this.text("incidence")}: <span class="unit">${this.number(area.incidence_last_week, 1)} / 100 000</span>
                           </span>`
                 }
                 ${
                     area.amount_two_weeks_ago === undefined
                         ? nothing
-                        : html`<span class="stats">${this.text("two_weeks_ago")}: ${area.amount_two_weeks_ago}</span>`
+                        : html`<span class="stats">${this.text("two_weeks_ago")}: ${this.number(area.amount_two_weeks_ago, 0)}</span>`
                 }
                 ${
                     area.change_percentage === undefined
                         ? nothing
-                        : html`<span class="stats"> ${this.text("change")}: ${area.change_percentage}% (${area.change_in_numbers}) </span>`
+                        : html`<span class="stats">
+                              ${this.text("change")}: ${changeText(area)} (${this.number(area.change_in_numbers ?? 0, 0)})
+                          </span>`
                 }
+                ${this.yearAgo === undefined ? nothing : html`<span class="stats">${this.text("last_year")}: ${this.number(this.yearAgo, 0)}</span>`}
             </div>
         `;
     }
@@ -264,6 +424,7 @@ export class ThlCard extends LitElement {
                         ? nothing
                         : html`<span class="stats">${this.text("two_weeks_ago")}: ${share(area.share_two_weeks_ago)}</span>`
                 }
+                ${this.yearAgo === undefined ? nothing : html`<span class="stats">${this.text("last_year")}: ${share(this.yearAgo)}</span>`}
             </div>
         `;
     }
@@ -280,7 +441,8 @@ export class ThlCard extends LitElement {
         const y = (value: number) => 28 - (value / top) * 26;
         const points = values.map((value, index) => `${x(index).toFixed(2)},${y(value).toFixed(2)}`).join(" ");
         const digits = isVisits(this.areas()) ? 3 : 1;
-        const marked = this.hovered ?? values.length - 1;
+        // A point of a trend that has since been replaced by a shorter one is the newest of the new.
+        const marked = Math.min(this.hovered ?? values.length - 1, values.length - 1);
         // The dot and the bubble sit over the drawing, so the stretched line doesn't stretch them.
         const at = `left: ${x(marked).toFixed(2)}%; top: ${((y(values[marked]) / 30) * 100).toFixed(2)}%;`;
 
@@ -288,8 +450,12 @@ export class ThlCard extends LitElement {
             <div class="trend">
                 <div
                     class="trend-plot"
+                    tabindex="0"
+                    @pointerdown=${(event: PointerEvent) => this.hover(event)}
                     @pointermove=${(event: PointerEvent) => this.hover(event)}
-                    @pointerleave=${() => (this.hovered = undefined)}
+                    @pointerleave=${(event: PointerEvent) => this.leave(event)}
+                    @keydown=${(event: KeyboardEvent) => this.step(event)}
+                    @blur=${() => (this.hovered = undefined)}
                 >
                     <svg viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="${this.text("trend")}">
                         <polyline class="trend-area" points="0,30 ${points} 100,30" />
@@ -300,7 +466,7 @@ export class ThlCard extends LitElement {
                         this.hovered === undefined
                             ? nothing
                             : html`<span class="trend-bubble" style="left: ${x(marked).toFixed(2)}%;">
-                                  ${this.text("week_short")} ${this.dataWeek(marked)}: ${this.number(values[marked], digits)}
+                                  ${this.text("week_short")} ${this.trend[marked].week}: ${this.number(values[marked], digits)}
                               </span>`
                     }
                 </div>
@@ -322,29 +488,48 @@ export class ThlCard extends LitElement {
         this.hovered = Math.round(fraction * (this.trend.length - 1));
     }
 
-    /**
-     * The week a point's figure is from. A figure is shown from the week after its own, so a point is the
-     * week before the one it sits in; the newest point is the figure the sensor shows now.
-     */
-    private dataWeek(index: number): number {
-        if (index === this.trend.length - 1) {
-            const week = Number(this.hass?.states[this.config?.entity ?? ""]?.attributes.last_week);
-            if (Number.isFinite(week)) {
-                return week;
-            }
+    /** A touch ends with the finger leaving, so the week it showed stays until the next touch. */
+    private leave(event: PointerEvent): void {
+        if (event.pointerType !== "touch") {
+            this.hovered = undefined;
         }
-        return isoWeek(this.trend[index].week - 7 * 24 * 60 * 60 * 1000);
     }
 
-    /** The sensor the trend is drawn from: the level for colouring by level, the cases otherwise. */
-    private trendSource(): string | undefined {
-        const areas = this.areas();
-        const area = findArea(areas, this.selected ?? WHOLE_COUNTRY);
+    /** The arrow keys move along the trend, Home and End to its ends. */
+    private step(event: KeyboardEvent): void {
+        const last = this.trend.length - 1;
+        const current = this.hovered ?? last;
+        const next = { ArrowLeft: current - 1, ArrowRight: current + 1, Home: 0, End: last }[event.key];
+        if (next !== undefined) {
+            event.preventDefault();
+            this.hovered = Math.min(Math.max(next, 0), last);
+        }
+    }
+
+    private press(event: KeyboardEvent, id: string): void {
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            this.select(id);
+        }
+    }
+
+    /**
+     * The sensor the trend is drawn from and the figure it shows now: the level for colouring by level, the cases
+     * otherwise. A county of the flu-like illness visits has one sensor, its share.
+     */
+    private trendSource(): { id: string; value: number | undefined } | undefined {
+        const area = findArea(this.areas(), this.selected ?? WHOLE_COUNTRY);
         if (area === undefined) {
             return undefined;
         }
-        const byLevel = this.colorBy === "level" && level(area) !== undefined;
-        return (byLevel && area.incidence_entity_id) || area.entity_id || undefined;
+        if (this.colorBy === "level" && area.incidence_entity_id && area.incidence_last_week !== undefined) {
+            return { id: area.incidence_entity_id, value: area.incidence_last_week };
+        }
+        if (!area.entity_id) {
+            return undefined;
+        }
+        const value = isVisits(this.areas()) ? area.share_last_week : area.amount_last_week;
+        return { id: area.entity_id, value: value ?? undefined };
     }
 
     private async refreshTrend(): Promise<void> {
@@ -352,9 +537,9 @@ export class ThlCard extends LitElement {
             return;
         }
         const source = this.trendSource();
-        const weeks = TREND_WEEKS;
-        const week = String(this.hass.states[this.config.entity]?.attributes.last_week ?? "");
-        const key = `${source}|${weeks}|${week}`;
+        const week = Number(this.hass.states[this.sensorId()]?.attributes.last_week);
+        // The figure is part of it, as THL may correct the week it has published.
+        const key = `${source?.id}|${week}|${source?.value}`;
         if (key === this.trendKey) {
             return;
         }
@@ -365,23 +550,78 @@ export class ThlCard extends LitElement {
             return;
         }
         try {
-            const points = await fetchTrend(this.hass, source, weeks);
+            const points = await fetchTrend(this.hass, source.id, TREND_WEEKS);
             // A newer request may have been made while this one was on its way.
             if (this.trendKey === key) {
-                this.trend = points;
+                this.trend = withCurrent(points, Number.isFinite(week) ? week : undefined, source.value, TREND_WEEKS);
             }
         } catch {
-            this.trend = [];
+            if (this.trendKey === key) {
+                this.trend = [];
+                this.retryLater();
+            }
         }
     }
 
+    /**
+     * Tries the fetches again after a while, such as once the websocket has reconnected. The keys stay until then, so
+     * drawing what is left doesn't ask again straight away.
+     */
+    private retryLater(): void {
+        window.clearTimeout(this.retry);
+        this.retry = window.setTimeout(() => {
+            this.retry = undefined;
+            this.trendKey = undefined;
+            this.yearAgoKey = undefined;
+            this.requestUpdate();
+        }, RETRY);
+    }
+
+    /** The chosen area's figure of the same week a year ago: its cases, or its share of visits. */
+    private async refreshYearAgo(): Promise<void> {
+        if (!this.hass || !this.config) {
+            return;
+        }
+        const area = findArea(this.areas(), this.selected ?? WHOLE_COUNTRY);
+        const week = Number(this.hass.states[this.sensorId()]?.attributes.last_week);
+        const key = `${area?.entity_id}|${week}`;
+        if (key === this.yearAgoKey) {
+            return;
+        }
+        this.yearAgoKey = key;
+        this.yearAgo = undefined;
+        if (!area?.entity_id || !Number.isFinite(week)) {
+            return;
+        }
+        try {
+            const value = await fetchYearAgo(this.hass, area.entity_id, week);
+            if (this.yearAgoKey === key) {
+                this.yearAgo = value;
+            }
+        } catch {
+            if (this.yearAgoKey === key) {
+                this.retryLater();
+            }
+        }
+    }
+
+    /** A county's number on the map, written as the user's number format writes it. */
+    private count(areas: Area[], id: string): string {
+        const count = caseCount(areas, id);
+        return typeof count === "number" ? this.number(count, 0) : count;
+    }
+
     private areas(): Area[] {
-        const entity = this.config ? this.hass?.states[this.config.entity] : undefined;
+        const entity = this.config ? this.hass?.states[this.sensorId()] : undefined;
         return (entity?.attributes.values as Area[] | undefined) ?? [];
     }
 
     private number(value: number, digits: number): string {
-        return new Intl.NumberFormat(this.language(), { maximumFractionDigits: digits }).format(value);
+        const grouping = this.hass?.locale?.number_format === "none" ? false : undefined;
+        return new Intl.NumberFormat(numberLocale(this.hass, this.language()), {
+            maximumFractionDigits: digits,
+            useGrouping: grouping,
+        }).format(value);
     }
 
     private message(text: string): TemplateResult {
@@ -407,6 +647,10 @@ export class ThlCard extends LitElement {
                 display: block;
             }
 
+            ha-card {
+                container: thl / inline-size;
+            }
+
             .card {
                 container-type: inline-size;
                 display: flex;
@@ -422,8 +666,7 @@ export class ThlCard extends LitElement {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                /* The drawing and the gap are sized from this, so the whole row keeps
-           its proportions at every width. */
+                /* The drawing and the gap are sized from this, so the whole row keeps its proportions at every width. */
                 font-size: clamp(11px, 5.5cqw, 18px);
                 gap: 0.5em;
                 max-width: 100%;
@@ -469,19 +712,151 @@ export class ThlCard extends LitElement {
                 opacity: 0.4;
             }
 
-            .map path.selected {
-                opacity: 0.5;
+            /* The chosen county keeps its colour, which means something, and gets an outline instead. */
+            .selected-outline {
+                fill: none;
+                stroke: var(--primary-text-color);
+                stroke-width: 2.5px;
+                vector-effect: non-scaling-stroke;
+                pointer-events: none;
             }
 
+            /* On the map the capital region's counties are too small for a thick line; the inset shows it. */
+            .selected-outline.small {
+                stroke-width: 1px;
+            }
+
+            .map path:focus {
+                outline: none;
+            }
+
+            .map path:focus-visible {
+                stroke: var(--primary-color);
+                stroke-width: 3px;
+                vector-effect: non-scaling-stroke;
+            }
+
+            /* Each number is centred on its county, in dark text, which reads on every colour of the map in both themes. */
             .amount {
-                color: var(--primary-text-color);
                 position: absolute;
+                transform: translate(-50%, -50%);
+                color: #1a1a1a;
+                font-weight: 600;
                 /* The numbers lie on top of the shapes, so let the clicks through to the county beneath. */
                 pointer-events: none;
-                text-shadow: 1px 1px 2px black;
-                /* 9px when the map is its original 235px wide, and in proportion after that. */
-                font-size: 9px;
-                font-size: 3.83cqw;
+                /* 8.5px when the map is its original 235px wide, and in proportion after that, but never too small to read. */
+                font-size: 8.5px;
+                font-size: max(7.5px, 3.6cqw);
+                white-space: nowrap;
+            }
+
+            .frame {
+                fill: none;
+                stroke: var(--secondary-text-color);
+                stroke-width: 1px;
+                stroke-dasharray: 3 2;
+                vector-effect: non-scaling-stroke;
+                pointer-events: none;
+            }
+
+            .inset {
+                position: relative;
+                container-type: inline-size;
+                flex: 0 0 auto;
+                width: 112px;
+                border: 1px dashed var(--secondary-text-color);
+                border-radius: 6px;
+                overflow: hidden;
+            }
+
+            .inset svg {
+                display: block;
+                width: 100%;
+                height: auto;
+            }
+
+            .inset path {
+                cursor: pointer;
+            }
+
+            .inset path:hover {
+                opacity: 0.7;
+            }
+
+            .inset .amount {
+                font-size: 11px;
+            }
+
+            .inset-caption {
+                position: absolute;
+                inset: 0 0 auto;
+                padding: 1px 0;
+                text-align: center;
+                /* Smaller in a small inset, so the name fits. */
+                font-size: min(10px, 11cqw);
+                white-space: nowrap;
+                color: var(--secondary-text-color);
+                background: color-mix(in srgb, var(--card-background-color, #fff) 85%, transparent);
+                pointer-events: none;
+            }
+
+            .key {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
+                width: min(100%, 300px);
+                font-size: 10px;
+                color: var(--secondary-text-color);
+            }
+
+            .swatches,
+            .bounds {
+                display: flex;
+                width: 100%;
+            }
+
+            .swatches {
+                height: 8px;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .swatches span,
+            .bounds span {
+                flex: 1;
+                text-align: center;
+                white-space: nowrap;
+            }
+
+            /* No cases at all is a colour of its own, apart from the scale. */
+            .swatches span:first-child,
+            .bounds span:first-child {
+                margin-right: 3px;
+            }
+
+            .chips {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .chip {
+                font: inherit;
+                font-size: 12px;
+                padding: 3px 10px;
+                border-radius: 14px;
+                border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+                background: none;
+                color: var(--primary-text-color);
+                cursor: pointer;
+            }
+
+            .chip.on {
+                background: var(--primary-color);
+                border-color: var(--primary-color);
+                color: var(--text-primary-color, #fff);
             }
 
             .figures {
@@ -495,6 +870,11 @@ export class ThlCard extends LitElement {
                 flex-direction: column;
                 align-items: center;
                 text-align: center;
+            }
+
+            /* A figure and its unit stay on one line. */
+            .unit {
+                white-space: nowrap;
             }
 
             .stats-title {
@@ -513,57 +893,14 @@ export class ThlCard extends LitElement {
                 width: 100%;
             }
 
+            /* The figures, and the inset beside them when there is room, under them when not. */
             .side {
                 display: flex;
-                flex-direction: column;
+                flex-wrap: wrap;
+                justify-content: center;
                 align-items: center;
-                gap: 12px;
+                gap: 12px 20px;
                 width: 100%;
-            }
-
-            /* A whole section wide: the map to the right, the figures over the sea west of it. */
-            .wide .body {
-                position: relative;
-                align-items: flex-end;
-            }
-
-            .wide .map {
-                width: min(68%, 300px);
-            }
-
-            .wide .side {
-                position: absolute;
-                left: 0;
-                top: 30%;
-                width: 50%;
-                align-items: flex-start;
-                /* Only the figures take the pointer; the counties under the rest stay clickable. */
-                pointer-events: none;
-            }
-
-            .wide .side > * {
-                pointer-events: auto;
-            }
-
-            .wide.card {
-                padding: 12px 25px;
-            }
-
-            .wide .disease {
-                font-size: clamp(11px, 5.5cqw, 20px);
-            }
-
-            .wide .trend {
-                width: 100%;
-            }
-
-            .wide .figures {
-                justify-content: flex-start;
-            }
-
-            .wide .stats-container {
-                align-items: flex-start;
-                text-align: left;
             }
 
             .trend {
@@ -579,6 +916,18 @@ export class ThlCard extends LitElement {
                 width: 100%;
                 height: 40px;
                 cursor: crosshair;
+                /* A finger drawn sideways moves along the trend, up and down it still scrolls the page. */
+                touch-action: pan-y;
+                border-radius: 4px;
+            }
+
+            .trend-plot:focus {
+                outline: none;
+            }
+
+            .trend-plot:focus-visible {
+                outline: 2px solid var(--primary-color);
+                outline-offset: 4px;
             }
 
             .trend svg {
@@ -634,6 +983,68 @@ export class ThlCard extends LitElement {
             .trend-caption {
                 font-size: 11px;
                 color: var(--secondary-text-color);
+            }
+
+            /* From a whole section of four in a view on down to a third of one of two: the map to the right, the figures over
+               the sea west of it, so the card isn't taller than it needs to be. Narrower, the figures stay under the map. */
+            @container thl (min-width: 290px) {
+                /* However wide the card, the map and the figures stay together in the middle. */
+                .body,
+                .trend,
+                .key {
+                    width: 100%;
+                    max-width: 560px;
+                }
+
+                .body {
+                    position: relative;
+                    align-items: flex-end;
+                }
+
+                .map {
+                    width: min(68%, 300px);
+                }
+
+                .side {
+                    position: absolute;
+                    left: 0;
+                    top: 16%;
+                    bottom: 0;
+                    width: 50%;
+                    flex-direction: column;
+                    flex-wrap: nowrap;
+                    justify-content: flex-start;
+                    align-items: flex-start;
+                    /* Only the figures take the pointer; the counties under the rest stay clickable. */
+                    pointer-events: none;
+                }
+
+                .side > * {
+                    pointer-events: auto;
+                }
+
+                .card {
+                    padding: 12px 16px;
+                }
+
+                .disease {
+                    font-size: clamp(11px, 5.5cqw, 20px);
+                }
+
+                /* At the bottom of the column, clear of the map, which is to the right of it. */
+                .inset {
+                    margin-top: auto;
+                    width: clamp(84px, 60%, 140px);
+                }
+
+                .figures {
+                    justify-content: flex-start;
+                }
+
+                .stats-container {
+                    align-items: flex-start;
+                    text-align: left;
+                }
             }
 
             .message {

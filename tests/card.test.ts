@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import "../src/thl-card";
 import type { ThlCard } from "../src/thl-card";
@@ -108,13 +108,37 @@ describe("the map", () => {
     });
 
     it("colours counties by how their numbers changed", async () => {
-        const root = shadow(await card(hass()));
+        const root = shadow(await card(hass(), { entity: ENTITY, color_by: "change" }));
         const fill = (id: string) => root.querySelector(`#${id}`)?.getAttribute("style");
         expect(fill("kainuun_hyvinvointialue")).toContain(FALLING_FAST);
         expect(fill("pirkanmaan_hyvinvointialue")).toContain(RISING_FAST);
         expect(fill("ahvenanmaa")).toContain(NO_CASES);
         // A county the sensor doesn't carry at all.
         expect(fill("satakunnan_hyvinvointialue")).toContain(NO_DATA);
+    });
+
+    it("writes a dash for the change of a county that had no cases the week before", async () => {
+        const element = await card(hass());
+        (shadow(element).querySelector("#lapin_hyvinvointialue") as SVGElement).dispatchEvent(new Event("click"));
+        await element.updateComplete;
+        expect(shadow(element).querySelector(".stats-container")?.textContent?.replace(/\s+/g, " ")).toContain("Muutos: – (2)");
+    });
+
+    it("lets a county be chosen from the keyboard, and says which one is chosen", async () => {
+        const element = await card(hass());
+        const lapland = shadow(element).querySelector("#lapin_hyvinvointialue") as SVGElement;
+        expect(lapland.getAttribute("tabindex")).toBe("0");
+        expect(lapland.getAttribute("aria-label")).toBe("Lapin hyvinvointialue");
+        expect(lapland.getAttribute("aria-pressed")).toBe("false");
+
+        lapland.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+        await element.updateComplete;
+        expect(lapland.getAttribute("aria-pressed")).toBe("true");
+        expect(shadow(element).querySelector(".stats-title")?.textContent).toBe("Lapin hyvinvointialue");
+
+        lapland.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+        await element.updateComplete;
+        expect(lapland.getAttribute("aria-pressed")).toBe("false");
     });
 
     it("keeps the transform of the shapes that have one", async () => {
@@ -139,8 +163,8 @@ describe("the size of the card", () => {
         const styles = [...root.querySelectorAll(".amount")].map((span) => span.getAttribute("style") ?? "");
         expect(styles.every((style) => style.includes("%"))).toBe(true);
         expect(styles.some((style) => style.includes("px"))).toBe(false);
-        // Lapland sat at 300px from the bottom of a 409px map, and 140px from its left edge.
-        expect(styles).toContain("bottom: 73.350%; left: 59.574%;");
+        // Lapland's number is at its visual centre, well inside it.
+        expect(styles.find((style) => style.startsWith("left: 6"))).toMatch(/^left: \d+\.\d{3}%; top: \d+\.\d{3}%;$/);
     });
 
     it("fixes the map at the width the configuration asks for", async () => {
@@ -172,24 +196,20 @@ describe("the shape of the card", () => {
     it("names the disease above the map, with the figures after it", async () => {
         const root = shadow(await card(hass()));
         const children = [...(root.querySelector(".card")?.children ?? [])].map((child) => child.className);
-        expect(children).toEqual(["disease", "body"]);
+        expect(children).toEqual(["disease", "body", "key"]);
         const body = [...(root.querySelector(".body")?.children ?? [])].map((child) => child.className);
         expect(body).toEqual(["map", "side"]);
     });
 
-    it("puts the figures beside the map when the card is a whole section wide", async () => {
-        expect(
-            shadow(await card(hass()))
-                .querySelector(".card")
-                ?.classList.contains("wide"),
-        ).toBe(true);
-        const full = await card(hass(), { entity: ENTITY, grid_options: { columns: "full" } });
-        expect(shadow(full).querySelector(".card")?.classList.contains("wide")).toBe(true);
-    });
-
-    it("keeps the figures under the map in a narrower card", async () => {
-        const root = shadow(await card(hass(), { entity: ENTITY, grid_options: { columns: 9 } }));
-        expect(root.querySelector(".card")?.classList.contains("wide")).toBe(false);
+    it("puts the figures beside the map by the card's own width, not by its columns", async () => {
+        const { ThlCard } = await import("../src/thl-card");
+        const styles = String((ThlCard as unknown as { styles: { cssText: string } }).styles.cssText);
+        // A whole section in a view of four sections is about 307px, which must still put the figures beside the map.
+        expect(styles).toContain("container: thl / inline-size");
+        expect(styles).toContain("@container thl (min-width: 290px)");
+        const narrow = shadow(await card(hass(), { entity: ENTITY, grid_options: { columns: 9 } }));
+        const full = shadow(await card(hass(), { entity: ENTITY, grid_options: { columns: "full" } }));
+        expect(narrow.querySelector(".card")?.className).toBe(full.querySelector(".card")?.className);
     });
 
     it("keeps the disease name with its drawing", async () => {
@@ -207,16 +227,17 @@ describe("the shape of the card", () => {
         expect(styles).toContain("width: 1.7em");
         expect(styles).toContain("gap: 0.5em");
         // A number must never swallow the click meant for the county under it.
-        expect(styles).toContain("pointer-events: none");
+        expect(styles).toMatch(/\.amount \{[^}]*pointer-events: none/);
         expect(styles).toContain("width: min(100%, 300px)");
-        expect(styles).not.toContain("@container card");
     });
 });
 
 describe("the drawings", () => {
-    it("draws the virus", async () => {
+    it("draws the virus in the theme's colours, so it shows on a dark card too", async () => {
         const root = shadow(await card(hass()));
-        expect(root.querySelectorAll(".disease-logo path")).toHaveLength(35);
+        const drawing = root.querySelector(".disease-logo")?.outerHTML ?? "";
+        expect(drawing).toContain("currentColor");
+        expect(drawing).not.toMatch(/#000000|#FFFFFF/i);
     });
 });
 
@@ -323,12 +344,23 @@ describe("by level and with a trend", () => {
         { area_id: "ahvenanmaa", name: "Ahvenanmaa", amount_last_week: 0, incidence_last_week: 0 },
     ];
 
+    // Wednesday of week 38, 2026. The statistics have weeks 35 to 37 finished, with the figures of weeks 34 to 36, and a
+    // row of the week still running, which the trend leaves out.
+    beforeEach(() => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date(2026, 8, 16, 12));
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    /** The trend's calls, without the year ago's, which ask for an end too. */
+    const trendCalls = (callWS: ReturnType<typeof vi.fn>) => callWS.mock.calls.filter(([message]) => !message.end_time);
+
     function withTrend(values: Area[] = LEVELS) {
         const callWS = vi.fn().mockImplementation(async (message: { statistic_ids: string[] }) => ({
-            [message.statistic_ids[0]]: [0, 1, 2].map((week) => ({
-                start: Date.now() - (2 - week) * 7 * 24 * 60 * 60 * 1000,
-                mean: week,
-            })),
+            [message.statistic_ids[0]]: [0, 1, 2, 9].map((mean, index) => ({ start: new Date(2026, 7, 25 + 7 * index).getTime(), mean })),
         }));
         return { state: { ...hass({ values }), callWS } as HomeAssistant, callWS };
     }
@@ -350,6 +382,27 @@ describe("by level and with a trend", () => {
         expect(root.querySelector(".stats-container")?.textContent).toContain("Ilmaantuvuus: 0,3 / 100 000");
     });
 
+    it("writes numbers in the format the user chose in Home Assistant", async () => {
+        const values = [{ ...LEVELS[0], incidence_last_week: 1234.5 }];
+        const figures = async (number_format: string) => {
+            const state = { ...hass({ values }), locale: { language: "fi", number_format } };
+            return shadow(await card(state))
+                .querySelector(".stats-container")
+                ?.textContent?.replace(/\s+/g, " ");
+        };
+        expect(await figures("language")).toContain("Ilmaantuvuus: 1 234,5 / 100 000");
+        expect(await figures("comma_decimal")).toContain("Ilmaantuvuus: 1,234.5 / 100 000");
+        expect(await figures("none")).toContain("Ilmaantuvuus: 1234,5 / 100 000");
+    });
+
+    it("follows a change of language without waiting for the sensor", async () => {
+        const state = hass({ values: LEVELS });
+        const element = await card(state);
+        element.hass = { ...state, locale: { language: "en" } };
+        await element.updateComplete;
+        expect(shadow(element).querySelector(".stats-container")?.textContent).toContain("Incidence: 0.3 / 100 000");
+    });
+
     it("draws the trend of the whole country’s incidence, then of the chosen county", async () => {
         const { state, callWS } = withTrend();
         const element = await card(state);
@@ -358,11 +411,12 @@ describe("by level and with a trend", () => {
 
         expect(callWS.mock.calls[0][0].statistic_ids).toEqual(["sensor.thl_influenssa_ilmaantuvuus"]);
         expect(root.querySelector(".trend polyline.trend-line")).not.toBeNull();
-        expect(root.querySelector(".trend-caption")?.textContent).toContain("3 viikkoa");
+        // Three finished weeks, and the figure of week 37 the sensor shows now.
+        expect(root.querySelector(".trend-caption")?.textContent).toContain("4 viikkoa");
 
         (root.querySelector("#lapin_hyvinvointialue") as SVGElement).dispatchEvent(new Event("click"));
         await settled(element);
-        expect(callWS.mock.calls.at(-1)?.[0].statistic_ids).toEqual(["sensor.thl_influenssa_lappi_ilmaantuvuus"]);
+        expect(trendCalls(callWS).at(-1)?.[0].statistic_ids).toEqual(["sensor.thl_influenssa_lappi_ilmaantuvuus"]);
     });
 
     it("covers six months, and names the week and figure the pointer is at", async () => {
@@ -377,7 +431,7 @@ describe("by level and with a trend", () => {
         plot.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 40 }) as DOMRect;
         plot.dispatchEvent(new PointerEvent("pointermove", { clientX: 49 }));
         await element.updateComplete;
-        expect(root.querySelector(".trend-bubble")?.textContent?.replace(/\s+/g, " ").trim()).toMatch(/^Vk \d+: 1$/);
+        expect(root.querySelector(".trend-bubble")?.textContent?.replace(/\s+/g, " ").trim()).toBe("Vk 35: 1");
 
         plot.dispatchEvent(new PointerEvent("pointerleave"));
         await element.updateComplete;
@@ -392,7 +446,44 @@ describe("by level and with a trend", () => {
         plot.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 40 }) as DOMRect;
         plot.dispatchEvent(new PointerEvent("pointermove", { clientX: 100 }));
         await element.updateComplete;
-        expect(shadow(element).querySelector(".trend-bubble")?.textContent).toContain("Vk 37: 2");
+        expect(shadow(element).querySelector(".trend-bubble")?.textContent).toContain("Vk 37: 0,3");
+    });
+
+    it("shows a tapped week until the next touch, and steps along the trend with the arrow keys", async () => {
+        const { state } = withTrend();
+        const element = await card(state);
+        await settled(element);
+        const root = shadow(element);
+        const plot = root.querySelector(".trend-plot") as HTMLElement;
+        plot.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 40 }) as DOMRect;
+        const bubble = () => root.querySelector(".trend-bubble")?.textContent?.replace(/\s+/g, " ").trim();
+
+        plot.dispatchEvent(new PointerEvent("pointerdown", { clientX: 0, pointerType: "touch" }));
+        plot.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "touch" }));
+        await element.updateComplete;
+        expect(bubble()).toBe("Vk 34: 0");
+
+        plot.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+        await element.updateComplete;
+        expect(bubble()).toBe("Vk 35: 1");
+        plot.dispatchEvent(new KeyboardEvent("keydown", { key: "End" }));
+        await element.updateComplete;
+        expect(bubble()).toBe("Vk 37: 0,3");
+    });
+
+    it("tries again later when the statistics couldn't be fetched", async () => {
+        const { state, callWS } = withTrend();
+        callWS.mockRejectedValueOnce(new Error("Connection lost"));
+        vi.useFakeTimers({ toFake: ["Date", "setTimeout", "clearTimeout"] });
+        vi.setSystemTime(new Date(2026, 8, 16, 12));
+        const element = await card(state);
+        await vi.advanceTimersByTimeAsync(0);
+        expect(shadow(element).querySelector(".trend")).toBeNull();
+
+        await vi.advanceTimersByTimeAsync(60 * 1000);
+        await element.updateComplete;
+        expect(trendCalls(callWS)).toHaveLength(2);
+        expect(shadow(element).querySelector(".trend")).not.toBeNull();
     });
 
     it("draws the cases when colouring by change", async () => {
@@ -401,11 +492,47 @@ describe("by level and with a trend", () => {
         expect(callWS.mock.calls[0][0].statistic_ids).toEqual([ENTITY]);
     });
 
+    it("draws the newest figure again when THL corrects it during the week", async () => {
+        const { state, callWS } = withTrend();
+        const element = await card(state);
+        await settled(element);
+        const corrected = LEVELS.map((area) => (area.area_id === "finland" ? { ...area, incidence_last_week: 0.4 } : area));
+        element.hass = {
+            ...state,
+            states: { [ENTITY]: { ...state.states[ENTITY]!, attributes: { ...state.states[ENTITY]!.attributes, values: corrected } } },
+        };
+        await settled(element);
+        expect(trendCalls(callWS)).toHaveLength(2);
+        expect(shadow(element).querySelector(".trend-caption")?.textContent).toContain("4 viikkoa");
+    });
+
+    it("doesn't break when the point pointed at is gone from a shorter trend", async () => {
+        const { state } = withTrend();
+        const element = await card(state);
+        await settled(element);
+        (element as unknown as { hovered: number }).hovered = 25;
+        await element.updateComplete;
+        expect(shadow(element).querySelector(".trend-bubble")?.textContent).toContain("Vk 37");
+    });
+
+    it("tries a failed fetch again when the card is shown again, if it was hidden before the retry", async () => {
+        const { state, callWS } = withTrend();
+        callWS.mockRejectedValueOnce(new Error("Connection lost"));
+        const element = await card(state);
+        await settled(element);
+        expect(shadow(element).querySelector(".trend")).toBeNull();
+        element.remove();
+        document.body.append(element);
+        await settled(element);
+        expect(trendCalls(callWS)).toHaveLength(2);
+        expect(shadow(element).querySelector(".trend")).not.toBeNull();
+    });
+
     it("draws no trend when asked not to", async () => {
         const { state, callWS } = withTrend();
         const element = await card(state, { entity: ENTITY, show_trend: false });
         await settled(element);
-        expect(callWS).not.toHaveBeenCalled();
+        expect(trendCalls(callWS)).toHaveLength(0);
         expect(shadow(element).querySelector(".trend")).toBeNull();
     });
 
@@ -415,7 +542,8 @@ describe("by level and with a trend", () => {
         await settled(element);
         element.hass = { ...state, states: { ...state.states } };
         await settled(element);
-        expect(callWS).toHaveBeenCalledTimes(1);
+        expect(callWS).toHaveBeenCalledTimes(2);
+        expect(trendCalls(callWS)).toHaveLength(1);
     });
 });
 
@@ -465,10 +593,158 @@ describe("the flu-like illness visits", () => {
         expect(figures).toContain("Toissa viikko: 0,011 %");
     });
 
+    it("colour by the change of the share when asked to", async () => {
+        const values = [VISITS[0], { ...VISITS[1], share_two_weeks_ago: 0.1 }];
+        const state = visits();
+        state.states["sensor.thl_influenssankaltaiset_kaynnit"]!.attributes.values = values;
+        const root = shadow(await card(state, { entity: "sensor.thl_influenssankaltaiset_kaynnit", color_by: "change" }));
+        expect(root.querySelector("#lapin_hyvinvointialue")?.getAttribute("style")).toContain(FALLING_FAST);
+    });
+
     it("write the visits on the map and colour by the share", async () => {
         const root = shadow(await card(visits(), { entity: "sensor.thl_influenssankaltaiset_kaynnit" }));
         const labels = [...root.querySelectorAll(".amount")].map((span) => span.textContent?.trim());
         expect(labels).toContain("12");
         expect(root.querySelector("#lapin_hyvinvointialue")?.getAttribute("style")).toContain(RISING_FAST);
+    });
+});
+
+describe("the capital region", () => {
+    it("is drawn again larger beside the figures, with its numbers there instead of on the map", async () => {
+        const root = shadow(await card(hass()));
+        const inset = root.querySelector(".side .inset");
+        expect(inset).not.toBeNull();
+        expect(inset?.getAttribute("aria-hidden")).toBe("true");
+        expect(inset?.querySelector(".inset-caption")?.textContent).toBe("Pääkaupunkiseutu");
+        expect(inset?.querySelectorAll(".amount")).toHaveLength(3);
+        expect(root.querySelectorAll(".map .amount")).toHaveLength(20);
+        expect(root.querySelector(".map .frame")).not.toBeNull();
+    });
+
+    it("chooses a county clicked in the inset", async () => {
+        const element = await card(hass());
+        const paths = [...shadow(element).querySelectorAll(".inset path")];
+        expect(paths.length).toBeGreaterThan(3);
+        // The inset's copies are for the pointer only: the keyboard reaches the counties on the map.
+        expect(paths.every((path) => !path.hasAttribute("tabindex") && !path.hasAttribute("id"))).toBe(true);
+        paths[0].dispatchEvent(new Event("click"));
+        await element.updateComplete;
+        expect(shadow(element).querySelector(".inset .selected-outline")).not.toBeNull();
+        expect(shadow(element).querySelector(".map .selected-outline")).not.toBeNull();
+    });
+
+    it("stays on the map when the inset is turned off, Helsinki's number moved into the sea off Vantaa's", async () => {
+        const values = [...AREAS, { area_id: "helsingin_kaupunki", name: "Helsingin kaupunki", amount_last_week: 186 }];
+        const root = shadow(await card(hass({ values }), { entity: ENTITY, show_inset: false }));
+        expect(root.querySelector(".inset")).toBeNull();
+        expect(root.querySelector(".frame")).toBeNull();
+        const labels = [...root.querySelectorAll(".map .amount")];
+        expect(labels).toHaveLength(23);
+        const helsinki = labels.find((label) => label.textContent === "186")?.getAttribute("style") ?? "";
+        expect(Number(/top: ([\d.]+)%/.exec(helsinki)?.[1])).toBeGreaterThan(97);
+    });
+
+    it("writes the numbers on the map in the user's number format", async () => {
+        const values = [...AREAS, { area_id: "kanta-hameen_hyvinvointialue", name: "Kanta-Häme", amount_last_week: 1234 }];
+        const root = shadow(await card(hass({ values })));
+        expect([...root.querySelectorAll(".amount")].some((label) => /^1\s234$/.test(label.textContent ?? ""))).toBe(true);
+    });
+});
+
+describe("the chosen county", () => {
+    it("keeps its colour and gets an outline drawn over its neighbours, the counties keeping their order", async () => {
+        const element = await card(hass(), { entity: ENTITY, default_area: "pirkanmaan_hyvinvointialue" });
+        const root = shadow(element);
+        const order = [...root.querySelectorAll(".map path[id]")].map((path) => path.id);
+        const outline = root.querySelector(".map .selected-outline");
+        expect(outline?.getAttribute("d")).toBe(root.querySelector("#pirkanmaan_hyvinvointialue")?.getAttribute("d"));
+        expect(outline?.parentElement?.lastElementChild).toBe(outline);
+
+        (root.querySelector("#lapin_hyvinvointialue") as SVGElement).dispatchEvent(new Event("click"));
+        await element.updateComplete;
+        expect([...root.querySelectorAll(".map path[id]")].map((path) => path.id)).toEqual(order);
+    });
+});
+
+describe("the colour key", () => {
+    it("says what the colours mean, by level against the whole country", async () => {
+        const key = shadow(await card(hass())).querySelector(".key");
+        expect(key?.querySelectorAll(".swatches span")).toHaveLength(6);
+        expect([...(key?.querySelectorAll(".bounds span") ?? [])].map((span) => span.textContent)).toEqual([
+            "0",
+            "< 0,5",
+            "< 0,8",
+            "≈ 1",
+            "> 1,25",
+            "> 2",
+        ]);
+        expect(key?.querySelector(".key-caption")?.textContent).toBe("ilmaantuvuus koko maahan verrattuna");
+    });
+
+    it("gives the bounds of the change when colouring by change", async () => {
+        const key = shadow(await card(hass(), { entity: ENTITY, color_by: "change" })).querySelector(".key");
+        expect(key?.querySelector(".bounds span:last-child")?.textContent).toBe("+40 %");
+        expect(key?.querySelector(".key-caption")?.textContent).toBe("muutos edellisestä viikosta");
+    });
+
+    it("is left out when asked", async () => {
+        expect(shadow(await card(hass(), { entity: ENTITY, show_key: false })).querySelector(".key")).toBeNull();
+    });
+});
+
+describe("several diseases", () => {
+    function two(): HomeAssistant {
+        const state = hass();
+        state.states["sensor.thl_norovirus"] = {
+            entity_id: "sensor.thl_norovirus",
+            state: "40",
+            attributes: { disease_name: "Norovirus", last_week: 37, values: [{ ...AREAS[0], amount_last_week: 40 }, AREAS[1]] },
+        };
+        return state;
+    }
+
+    it("are switched between with a button each, the chosen county staying chosen", async () => {
+        const element = await card(two(), { entity: [ENTITY, "sensor.thl_norovirus"], default_area: "lapin_hyvinvointialue" });
+        const root = shadow(element);
+        const chips = [...root.querySelectorAll(".chip")] as HTMLButtonElement[];
+        expect(chips.map((chip) => chip.textContent?.trim())).toEqual(["Influenssa", "Norovirus"]);
+        expect(chips[0].getAttribute("aria-pressed")).toBe("true");
+
+        chips[1].click();
+        await element.updateComplete;
+        expect(root.querySelector(".disease-name")?.textContent?.trim()).toBe("Norovirus");
+        expect(root.querySelector(".stats-title")?.textContent).toBe("Lapin hyvinvointialue");
+    });
+
+    it("has no buttons for one", async () => {
+        expect(shadow(await card(two())).querySelector(".chips")).toBeNull();
+        expect(shadow(await card(two(), { entity: [ENTITY] })).querySelector(".chips")).toBeNull();
+    });
+});
+
+describe("the same week a year ago", () => {
+    it("is shown when the statistics reach that far, and left out when they don't", async () => {
+        const shortCalls = vi.fn().mockResolvedValue({});
+        const callWS = vi.fn().mockImplementation(async (message: { end_time?: string; statistic_ids: string[] }) => {
+            if (!message.end_time) {
+                return {};
+            }
+            // Week 37's figure was shown during week 38 a year ago, from Monday 15 September 2025.
+            return { [message.statistic_ids[0]]: [{ start: new Date(2025, 8, 16).getTime(), mean: 24 }] };
+        });
+        vi.useFakeTimers({ toFake: ["Date"] });
+        vi.setSystemTime(new Date(2026, 8, 16, 12));
+        const values = AREAS.map((area) => ({ ...area, entity_id: `sensor.${area.area_id}` }));
+        const element = await card({ ...hass({ values }), callWS } as HomeAssistant);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await element.updateComplete;
+        vi.useRealTimers();
+        expect(shadow(element).querySelector(".stats-container")?.textContent?.replace(/\s+/g, " ")).toContain("Vuosi sitten: 24");
+
+        const without = await card({ ...hass({ values }), callWS: shortCalls } as HomeAssistant);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        await without.updateComplete;
+        expect(shortCalls.mock.calls.some(([message]) => message.end_time)).toBe(true);
+        expect(shadow(without).querySelector(".stats-container")?.textContent).not.toContain("Vuosi sitten");
     });
 });

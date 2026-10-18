@@ -7,7 +7,7 @@ import { LitElement, html, nothing } from "lit";
 import type { TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 
-import type { HomeAssistant } from "./hass";
+import type { HassEntity, HomeAssistant } from "./hass";
 import { browserLanguage, translate } from "./localize/localize";
 import { WHOLE_COUNTRY } from "./const";
 import type { Area, ThlCardConfig } from "./types";
@@ -16,7 +16,7 @@ interface SchemaEntry {
     name: string;
 }
 
-const DEFAULTS: Record<string, unknown> = { color_by: "level", show_trend: true };
+const DEFAULTS: Record<string, unknown> = { color_by: "level", show_trend: true, show_inset: true, show_key: true };
 
 /**
  * The sensors the card can show: the whole country's sensor of each disease, and of the flu-like illness
@@ -24,9 +24,9 @@ const DEFAULTS: Record<string, unknown> = { color_by: "level", show_trend: true 
  */
 export function cardEntities(hass: HomeAssistant): string[] {
     return Object.values(hass.states)
-        .filter((entity) => entity !== undefined && entity.entity_id.startsWith("sensor."))
-        .filter((entity) => Array.isArray(entity?.attributes.values) && String(entity?.attributes.attribution).includes("THL"))
-        .map((entity) => entity!.entity_id)
+        .filter((entity): entity is HassEntity => entity !== undefined && entity.entity_id.startsWith("sensor."))
+        .filter((entity) => Array.isArray(entity.attributes.values) && String(entity.attributes.attribution).includes("THL"))
+        .map((entity) => entity.entity_id)
         .sort();
 }
 
@@ -45,7 +45,7 @@ function schema(hass: HomeAssistant, entity: string, text: (key: string) => stri
         {
             name: "entity",
             required: true,
-            selector: { entity: { domain: "sensor", integration: "thl", include_entities: cardEntities(hass) } },
+            selector: { entity: { multiple: true, domain: "sensor", integration: "thl", include_entities: cardEntities(hass) } },
         },
         {
             name: "color_by",
@@ -64,6 +64,8 @@ function schema(hass: HomeAssistant, entity: string, text: (key: string) => stri
             selector: { select: { mode: "dropdown", options: countyOptions(hass, entity, text) } },
         },
         { name: "show_trend", selector: { boolean: {} } },
+        { name: "show_inset", selector: { boolean: {} } },
+        { name: "show_key", selector: { boolean: {} } },
         {
             name: "map_width",
             selector: { number: { min: 120, max: 600, step: 5, unit_of_measurement: "px", mode: "box" } },
@@ -87,8 +89,8 @@ export class ThlCardEditor extends LitElement {
         return html`
             <ha-form
                 .hass=${this.hass}
-                .data=${{ ...DEFAULTS, ...this.config }}
-                .schema=${schema(this.hass, this.config.entity, (key) => this.text(key))}
+                .data=${{ ...DEFAULTS, ...this.config, entity: this.entities() }}
+                .schema=${schema(this.hass, this.entities()[0] ?? "", (key) => this.text(key))}
                 .computeLabel=${(entry: SchemaEntry) => this.text(entry.name)}
                 .computeHelper=${(entry: SchemaEntry) => this.helper(entry.name)}
                 @value-changed=${this.valueChanged}
@@ -96,8 +98,17 @@ export class ThlCardEditor extends LitElement {
         `;
     }
 
+    /** The configured sensors as a list, which the form's picker of several takes. */
+    private entities(): string[] {
+        return [this.config.entity ?? []].flat().filter(Boolean);
+    }
+
     private valueChanged(event: CustomEvent<{ value: ThlCardConfig }>): void {
         const config: ThlCardConfig = { ...event.detail.value };
+
+        // One sensor stays a plain entity, as the card was configured before it took several, unless it was a list.
+        const entities = [config.entity ?? []].flat();
+        config.entity = entities.length === 1 && !Array.isArray(this.config.entity) ? entities[0] : entities;
 
         // An empty width means the map follows the size of the card.
         if (config.map_width === undefined || config.map_width === null || String(config.map_width) === "") {

@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
     caseCount,
+    changeColor,
     changePercentage,
+    changeText,
     fillColor,
     FALLING,
     FALLING_FAST,
@@ -49,17 +51,17 @@ describe("finding a county", () => {
     });
 });
 
-describe("the colour of a county", () => {
+describe("colouring by change", () => {
     it("is the text colour when the sensor has no numbers for it", () => {
-        expect(fillColor(undefined)).toBe(NO_DATA);
+        expect(changeColor(undefined)).toBe(NO_DATA);
     });
 
     it("is blue when there were no cases at all, this week or before", () => {
-        expect(fillColor(area({ amount_last_week: 0, change_percentage: 0 }))).toBe(NO_CASES);
+        expect(changeColor(area({ amount_last_week: 0, change_percentage: 0 }))).toBe(NO_CASES);
     });
 
     it("is not blue when the change is a real reading of no change", () => {
-        expect(fillColor(area({ amount_last_week: 0, change_percentage: "0" }))).toBe(STEADY);
+        expect(changeColor(area({ amount_last_week: 0, change_percentage: "0" }))).toBe(STEADY);
     });
 
     it.each([
@@ -76,11 +78,35 @@ describe("the colour of a county", () => {
         ["41", RISING_FAST],
         ["100", RISING_FAST],
     ])("is right for a change of %s per cent", (change, expected) => {
-        expect(fillColor(area({ change_percentage: change }))).toBe(expected);
+        expect(changeColor(area({ change_percentage: change }))).toBe(expected);
     });
 
     it("is the steady colour when THL has not published the week before", () => {
-        expect(fillColor(area({ change_percentage: undefined, amount_two_weeks_ago: undefined }))).toBe(STEADY);
+        expect(changeColor(area({ change_percentage: undefined, amount_two_weeks_ago: undefined }))).toBe(STEADY);
+    });
+
+    it("takes the change of the share for the flu-like illness visits, which come without one", () => {
+        expect(changePercentage(area({ change_percentage: undefined, share_last_week: 0.03, share_two_weeks_ago: 0.02 }))).toBeCloseTo(50);
+        expect(changeColor(area({ change_percentage: undefined, share_last_week: 0.03, share_two_weeks_ago: 0.02 }))).toBe(RISING_FAST);
+        expect(changeColor(area({ change_percentage: undefined, share_last_week: 0.019, share_two_weeks_ago: 0.02 }))).toBe(STEADY);
+        expect(changeColor(area({ change_percentage: undefined, share_last_week: 0, share_two_weeks_ago: 0 }))).toBe(NO_CASES);
+        expect(changeColor(area({ change_percentage: undefined, share_last_week: 0.02, share_two_weeks_ago: null }))).toBe(STEADY);
+        // No visits at all, so no share to change.
+        expect(changeColor(area({ change_percentage: undefined, share_last_week: null, share_two_weeks_ago: 0.02 }))).toBe(NO_DATA);
+    });
+
+    it("writes a dash for the change when there was nothing the week before to compare with", () => {
+        expect(changeText(area({ change_percentage: 0 }))).toBe("–");
+        expect(changeText(area({ change_percentage: "0" }))).toBe("0%");
+        expect(changeText(area({ change_percentage: "-15" }))).toBe("-15%");
+    });
+});
+
+describe("the colour of a county", () => {
+    it("is by level unless asked otherwise", () => {
+        const whole = area({ area_id: "finland", incidence_last_week: 1 });
+        expect(fillColor(area({ incidence_last_week: 3, change_percentage: "-50" }), undefined, whole)).toBe(RISING_FAST);
+        expect(fillColor(area({ incidence_last_week: 3, change_percentage: "-50" }), "change", whole)).toBe(FALLING_FAST);
     });
 });
 

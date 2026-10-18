@@ -1,0 +1,727 @@
+{
+    "clock": "2027-02-10T12:00:00+02:00",
+    "states": {
+        "sensor.thl_influenssa": {
+            "state": "1502",
+            "attributes": {
+                "state_class": "measurement",
+                "last_week": 5,
+                "values": [
+                    {
+                        "name": "Kaikki hyvinvointialueet",
+                        "amount_last_week": 1502,
+                        "area_id": "finland",
+                        "incidence_last_week": 26.9,
+                        "amount_two_weeks_ago": 1312,
+                        "change_in_numbers": 190,
+                        "change_percentage": "14",
+                        "incidence_two_weeks_ago": 23.5,
+                        "entity_id": "sensor.thl_influenssa",
+                        "incidence_entity_id": "sensor.thl_influenssa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Itä-Uudenmaan hyvinvointialue",
+                        "amount_last_week": 26,
+                        "area_id": "ita-uudenmaan_hyvinvointialue",
+                        "incidence_last_week": 26.3,
+                        "amount_two_weeks_ago": 23,
+                        "change_in_numbers": 3,
+                        "change_percentage": "13",
+                        "incidence_two_weeks_ago": 23.2,
+                        "entity_id": "sensor.thl_influenssa_ita_uusimaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_ita_uusimaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Keski-Uudenmaan hyvinvointialue",
+                        "amount_last_week": 64,
+                        "area_id": "keski-uudenmaan_hyvinvointialue",
+                        "incidence_last_week": 31.2,
+                        "amount_two_weeks_ago": 51,
+                        "change_in_numbers": 13,
+                        "change_percentage": "25",
+                        "incidence_two_weeks_ago": 24.9,
+                        "entity_id": "sensor.thl_influenssa_keski_uusimaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_keski_uusimaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Länsi-Uudenmaan hyvinvointialue",
+                        "amount_last_week": 117,
+                        "area_id": "lansi-uudenmaan_hyvinvointialue",
+                        "incidence_last_week": 24.0,
+                        "amount_two_weeks_ago": 111,
+                        "change_in_numbers": 6,
+                        "change_percentage": "5",
+                        "incidence_two_weeks_ago": 22.8,
+                        "entity_id": "sensor.thl_influenssa_lansi_uusimaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_lansi_uusimaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Vantaan ja Keravan hyvinvointialue",
+                        "amount_last_week": 96,
+                        "area_id": "vantaan_ja_keravan_hyvinvointialue",
+                        "incidence_last_week": 33.7,
+                        "amount_two_weeks_ago": 74,
+                        "change_in_numbers": 22,
+                        "change_percentage": "30",
+                        "incidence_two_weeks_ago": 26.0,
+                        "entity_id": "sensor.thl_influenssa_vantaa_ja_kerava",
+                        "incidence_entity_id": "sensor.thl_influenssa_vantaa_ja_kerava_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Varsinais-Suomen hyvinvointialue",
+                        "amount_last_week": 106,
+                        "area_id": "varsinais-suomen_hyvinvointialue",
+                        "incidence_last_week": 21.6,
+                        "amount_two_weeks_ago": 112,
+                        "change_in_numbers": -6,
+                        "change_percentage": "-5",
+                        "incidence_two_weeks_ago": 22.9,
+                        "entity_id": "sensor.thl_influenssa_varsinais_suomi",
+                        "incidence_entity_id": "sensor.thl_influenssa_varsinais_suomi_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Satakunnan hyvinvointialue",
+                        "amount_last_week": 36,
+                        "area_id": "satakunnan_hyvinvointialue",
+                        "incidence_last_week": 17.0,
+                        "amount_two_weeks_ago": 42,
+                        "change_in_numbers": -6,
+                        "change_percentage": "-14",
+                        "incidence_two_weeks_ago": 19.8,
+                        "entity_id": "sensor.thl_influenssa_satakunta",
+                        "incidence_entity_id": "sensor.thl_influenssa_satakunta_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Kanta-Hämeen hyvinvointialue",
+                        "amount_last_week": 24,
+                        "area_id": "kanta-hameen_hyvinvointialue",
+                        "incidence_last_week": 14.1,
+                        "amount_two_weeks_ago": 30,
+                        "change_in_numbers": -6,
+                        "change_percentage": "-20",
+                        "incidence_two_weeks_ago": 17.6,
+                        "entity_id": "sensor.thl_influenssa_kanta_hame",
+                        "incidence_entity_id": "sensor.thl_influenssa_kanta_hame_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pirkanmaan hyvinvointialue",
+                        "amount_last_week": 205,
+                        "area_id": "pirkanmaan_hyvinvointialue",
+                        "incidence_last_week": 38.3,
+                        "amount_two_weeks_ago": 141,
+                        "change_in_numbers": 64,
+                        "change_percentage": "45",
+                        "incidence_two_weeks_ago": 26.4,
+                        "entity_id": "sensor.thl_influenssa_pirkanmaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_pirkanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Päijät-Hämeen hyvinvointialue",
+                        "amount_last_week": 49,
+                        "area_id": "paijat-hameen_hyvinvointialue",
+                        "incidence_last_week": 23.9,
+                        "amount_two_weeks_ago": 49,
+                        "change_in_numbers": 0,
+                        "change_percentage": "0",
+                        "incidence_two_weeks_ago": 23.9,
+                        "entity_id": "sensor.thl_influenssa_paijat_hame",
+                        "incidence_entity_id": "sensor.thl_influenssa_paijat_hame_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Kymenlaakson hyvinvointialue",
+                        "amount_last_week": 29,
+                        "area_id": "kymenlaakson_hyvinvointialue",
+                        "incidence_last_week": 18.0,
+                        "amount_two_weeks_ago": 32,
+                        "change_in_numbers": -3,
+                        "change_percentage": "-9",
+                        "incidence_two_weeks_ago": 19.9,
+                        "entity_id": "sensor.thl_influenssa_kymenlaakso",
+                        "incidence_entity_id": "sensor.thl_influenssa_kymenlaakso_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Etelä-Karjalan hyvinvointialue",
+                        "amount_last_week": 14,
+                        "area_id": "etela-karjalan_hyvinvointialue",
+                        "incidence_last_week": 11.1,
+                        "amount_two_weeks_ago": 25,
+                        "change_in_numbers": -11,
+                        "change_percentage": "-44",
+                        "incidence_two_weeks_ago": 19.8,
+                        "entity_id": "sensor.thl_influenssa_etela_karjala",
+                        "incidence_entity_id": "sensor.thl_influenssa_etela_karjala_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Etelä-Savon hyvinvointialue",
+                        "amount_last_week": 12,
+                        "area_id": "etela-savon_hyvinvointialue",
+                        "incidence_last_week": 9.4,
+                        "amount_two_weeks_ago": 24,
+                        "change_in_numbers": -12,
+                        "change_percentage": "-50",
+                        "incidence_two_weeks_ago": 18.8,
+                        "entity_id": "sensor.thl_influenssa_etela_savo",
+                        "incidence_entity_id": "sensor.thl_influenssa_etela_savo_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjois-Savon hyvinvointialue",
+                        "amount_last_week": 65,
+                        "area_id": "pohjois-savon_hyvinvointialue",
+                        "incidence_last_week": 26.2,
+                        "amount_two_weeks_ago": 54,
+                        "change_in_numbers": 11,
+                        "change_percentage": "20",
+                        "incidence_two_weeks_ago": 21.8,
+                        "entity_id": "sensor.thl_influenssa_pohjois_savo",
+                        "incidence_entity_id": "sensor.thl_influenssa_pohjois_savo_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjois-Karjalan hyvinvointialue",
+                        "amount_last_week": 33,
+                        "area_id": "pohjois-karjalan_hyvinvointialue",
+                        "incidence_last_week": 20.2,
+                        "amount_two_weeks_ago": 35,
+                        "change_in_numbers": -2,
+                        "change_percentage": "-6",
+                        "incidence_two_weeks_ago": 21.5,
+                        "entity_id": "sensor.thl_influenssa_pohjois_karjala",
+                        "incidence_entity_id": "sensor.thl_influenssa_pohjois_karjala_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Keski-Suomen hyvinvointialue",
+                        "amount_last_week": 79,
+                        "area_id": "keski-suomen_hyvinvointialue",
+                        "incidence_last_week": 28.7,
+                        "amount_two_weeks_ago": 59,
+                        "change_in_numbers": 20,
+                        "change_percentage": "34",
+                        "incidence_two_weeks_ago": 21.5,
+                        "entity_id": "sensor.thl_influenssa_keski_suomi",
+                        "incidence_entity_id": "sensor.thl_influenssa_keski_suomi_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Etelä-Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 105,
+                        "area_id": "etela-pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 55.3,
+                        "amount_two_weeks_ago": 66,
+                        "change_in_numbers": 39,
+                        "change_percentage": "59",
+                        "incidence_two_weeks_ago": 34.7,
+                        "entity_id": "sensor.thl_influenssa_etela_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_etela_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 81,
+                        "area_id": "pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 45.8,
+                        "amount_two_weeks_ago": 54,
+                        "change_in_numbers": 27,
+                        "change_percentage": "50",
+                        "incidence_two_weeks_ago": 30.5,
+                        "entity_id": "sensor.thl_influenssa_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Keski-Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 42,
+                        "area_id": "keski-pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 61.8,
+                        "amount_two_weeks_ago": 25,
+                        "change_in_numbers": 17,
+                        "change_percentage": "68",
+                        "incidence_two_weeks_ago": 36.8,
+                        "entity_id": "sensor.thl_influenssa_keski_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_keski_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjois-Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 105,
+                        "area_id": "pohjois-pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 25.1,
+                        "amount_two_weeks_ago": 95,
+                        "change_in_numbers": 10,
+                        "change_percentage": "11",
+                        "incidence_two_weeks_ago": 22.7,
+                        "entity_id": "sensor.thl_influenssa_pohjois_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_pohjois_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Kainuun hyvinvointialue",
+                        "amount_last_week": 5,
+                        "area_id": "kainuun_hyvinvointialue",
+                        "incidence_last_week": 7.0,
+                        "amount_two_weeks_ago": 8,
+                        "change_in_numbers": -3,
+                        "change_percentage": "-38",
+                        "incidence_two_weeks_ago": 11.3,
+                        "entity_id": "sensor.thl_influenssa_kainuu",
+                        "incidence_entity_id": "sensor.thl_influenssa_kainuu_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Lapin hyvinvointialue",
+                        "amount_last_week": 23,
+                        "area_id": "lapin_hyvinvointialue",
+                        "incidence_last_week": 13.1,
+                        "amount_two_weeks_ago": 33,
+                        "change_in_numbers": -10,
+                        "change_percentage": "-30",
+                        "incidence_two_weeks_ago": 18.8,
+                        "entity_id": "sensor.thl_influenssa_lappi",
+                        "incidence_entity_id": "sensor.thl_influenssa_lappi_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Helsingin kaupunki",
+                        "amount_last_week": 186,
+                        "area_id": "helsingin_kaupunki",
+                        "incidence_last_week": 27.6,
+                        "amount_two_weeks_ago": 169,
+                        "change_in_numbers": 17,
+                        "change_percentage": "10",
+                        "incidence_two_weeks_ago": 25.0,
+                        "entity_id": "sensor.thl_influenssa_helsinki",
+                        "incidence_entity_id": "sensor.thl_influenssa_helsinki_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Ahvenanmaa",
+                        "amount_last_week": 0,
+                        "area_id": "ahvenanmaa",
+                        "incidence_last_week": 0.0,
+                        "amount_two_weeks_ago": 0,
+                        "change_in_numbers": 0,
+                        "change_percentage": 0,
+                        "incidence_two_weeks_ago": 0.0,
+                        "entity_id": "sensor.thl_influenssa_ahvenanmaa",
+                        "incidence_entity_id": "sensor.thl_influenssa_ahvenanmaa_ilmaantuvuus"
+                    }
+                ],
+                "disease_id": "877719",
+                "disease_name": "Influenssa",
+                "icon": "mdi:virus",
+                "attribution": "Data provided by Finnish Institute for Health and Welfare (THL)",
+                "friendly_name": "THL Influenssa Tila"
+            }
+        },
+        "sensor.thl_influenssa_ilmaantuvuus": {
+            "state": "26.9",
+            "attributes": {
+                "state_class": "measurement",
+                "last_week": 5,
+                "attribution": "Data provided by Finnish Institute for Health and Welfare (THL)",
+                "unit_of_measurement": "per 100 000",
+                "friendly_name": "THL Influenssa Ilmaantuvuus"
+            }
+        },
+        "sensor.thl_influenssa_pirkanmaa": {
+            "state": "205",
+            "attributes": {
+                "state_class": "measurement",
+                "last_week": 5,
+                "attribution": "Data provided by Finnish Institute for Health and Welfare (THL)",
+                "friendly_name": "THL Influenssa Pirkanmaa"
+            }
+        },
+        "sensor.thl_norovirus": {
+            "state": "463",
+            "attributes": {
+                "state_class": "measurement",
+                "last_week": 5,
+                "values": [
+                    {
+                        "name": "Kaikki hyvinvointialueet",
+                        "amount_last_week": 463,
+                        "area_id": "finland",
+                        "incidence_last_week": 26.9,
+                        "amount_two_weeks_ago": 1312,
+                        "change_in_numbers": 190,
+                        "change_percentage": "14",
+                        "incidence_two_weeks_ago": 23.5,
+                        "entity_id": "sensor.thl_norovirus",
+                        "incidence_entity_id": "sensor.thl_norovirus_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Itä-Uudenmaan hyvinvointialue",
+                        "amount_last_week": 6,
+                        "area_id": "ita-uudenmaan_hyvinvointialue",
+                        "incidence_last_week": 26.3,
+                        "amount_two_weeks_ago": 23,
+                        "change_in_numbers": 3,
+                        "change_percentage": "13",
+                        "incidence_two_weeks_ago": 23.2,
+                        "entity_id": "sensor.thl_norovirus_ita_uusimaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_ita_uusimaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Keski-Uudenmaan hyvinvointialue",
+                        "amount_last_week": 18,
+                        "area_id": "keski-uudenmaan_hyvinvointialue",
+                        "incidence_last_week": 31.2,
+                        "amount_two_weeks_ago": 51,
+                        "change_in_numbers": 13,
+                        "change_percentage": "25",
+                        "incidence_two_weeks_ago": 24.9,
+                        "entity_id": "sensor.thl_norovirus_keski_uusimaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_keski_uusimaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Länsi-Uudenmaan hyvinvointialue",
+                        "amount_last_week": 33,
+                        "area_id": "lansi-uudenmaan_hyvinvointialue",
+                        "incidence_last_week": 24.0,
+                        "amount_two_weeks_ago": 111,
+                        "change_in_numbers": 6,
+                        "change_percentage": "5",
+                        "incidence_two_weeks_ago": 22.8,
+                        "entity_id": "sensor.thl_norovirus_lansi_uusimaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_lansi_uusimaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Vantaan ja Keravan hyvinvointialue",
+                        "amount_last_week": 30,
+                        "area_id": "vantaan_ja_keravan_hyvinvointialue",
+                        "incidence_last_week": 33.7,
+                        "amount_two_weeks_ago": 74,
+                        "change_in_numbers": 22,
+                        "change_percentage": "30",
+                        "incidence_two_weeks_ago": 26.0,
+                        "entity_id": "sensor.thl_norovirus_vantaa_ja_kerava",
+                        "incidence_entity_id": "sensor.thl_norovirus_vantaa_ja_kerava_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Varsinais-Suomen hyvinvointialue",
+                        "amount_last_week": 33,
+                        "area_id": "varsinais-suomen_hyvinvointialue",
+                        "incidence_last_week": 21.6,
+                        "amount_two_weeks_ago": 112,
+                        "change_in_numbers": -6,
+                        "change_percentage": "-5",
+                        "incidence_two_weeks_ago": 22.9,
+                        "entity_id": "sensor.thl_norovirus_varsinais_suomi",
+                        "incidence_entity_id": "sensor.thl_norovirus_varsinais_suomi_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Satakunnan hyvinvointialue",
+                        "amount_last_week": 13,
+                        "area_id": "satakunnan_hyvinvointialue",
+                        "incidence_last_week": 17.0,
+                        "amount_two_weeks_ago": 42,
+                        "change_in_numbers": -6,
+                        "change_percentage": "-14",
+                        "incidence_two_weeks_ago": 19.8,
+                        "entity_id": "sensor.thl_norovirus_satakunta",
+                        "incidence_entity_id": "sensor.thl_norovirus_satakunta_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Kanta-Hämeen hyvinvointialue",
+                        "amount_last_week": 7,
+                        "area_id": "kanta-hameen_hyvinvointialue",
+                        "incidence_last_week": 14.1,
+                        "amount_two_weeks_ago": 30,
+                        "change_in_numbers": -6,
+                        "change_percentage": "-20",
+                        "incidence_two_weeks_ago": 17.6,
+                        "entity_id": "sensor.thl_norovirus_kanta_hame",
+                        "incidence_entity_id": "sensor.thl_norovirus_kanta_hame_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pirkanmaan hyvinvointialue",
+                        "amount_last_week": 64,
+                        "area_id": "pirkanmaan_hyvinvointialue",
+                        "incidence_last_week": 38.3,
+                        "amount_two_weeks_ago": 141,
+                        "change_in_numbers": 64,
+                        "change_percentage": "45",
+                        "incidence_two_weeks_ago": 26.4,
+                        "entity_id": "sensor.thl_norovirus_pirkanmaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_pirkanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Päijät-Hämeen hyvinvointialue",
+                        "amount_last_week": 12,
+                        "area_id": "paijat-hameen_hyvinvointialue",
+                        "incidence_last_week": 23.9,
+                        "amount_two_weeks_ago": 49,
+                        "change_in_numbers": 0,
+                        "change_percentage": "0",
+                        "incidence_two_weeks_ago": 23.9,
+                        "entity_id": "sensor.thl_norovirus_paijat_hame",
+                        "incidence_entity_id": "sensor.thl_norovirus_paijat_hame_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Kymenlaakson hyvinvointialue",
+                        "amount_last_week": 10,
+                        "area_id": "kymenlaakson_hyvinvointialue",
+                        "incidence_last_week": 18.0,
+                        "amount_two_weeks_ago": 32,
+                        "change_in_numbers": -3,
+                        "change_percentage": "-9",
+                        "incidence_two_weeks_ago": 19.9,
+                        "entity_id": "sensor.thl_norovirus_kymenlaakso",
+                        "incidence_entity_id": "sensor.thl_norovirus_kymenlaakso_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Etelä-Karjalan hyvinvointialue",
+                        "amount_last_week": 6,
+                        "area_id": "etela-karjalan_hyvinvointialue",
+                        "incidence_last_week": 11.1,
+                        "amount_two_weeks_ago": 25,
+                        "change_in_numbers": -11,
+                        "change_percentage": "-44",
+                        "incidence_two_weeks_ago": 19.8,
+                        "entity_id": "sensor.thl_norovirus_etela_karjala",
+                        "incidence_entity_id": "sensor.thl_norovirus_etela_karjala_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Etelä-Savon hyvinvointialue",
+                        "amount_last_week": 2,
+                        "area_id": "etela-savon_hyvinvointialue",
+                        "incidence_last_week": 9.4,
+                        "amount_two_weeks_ago": 24,
+                        "change_in_numbers": -12,
+                        "change_percentage": "-50",
+                        "incidence_two_weeks_ago": 18.8,
+                        "entity_id": "sensor.thl_norovirus_etela_savo",
+                        "incidence_entity_id": "sensor.thl_norovirus_etela_savo_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjois-Savon hyvinvointialue",
+                        "amount_last_week": 23,
+                        "area_id": "pohjois-savon_hyvinvointialue",
+                        "incidence_last_week": 26.2,
+                        "amount_two_weeks_ago": 54,
+                        "change_in_numbers": 11,
+                        "change_percentage": "20",
+                        "incidence_two_weeks_ago": 21.8,
+                        "entity_id": "sensor.thl_norovirus_pohjois_savo",
+                        "incidence_entity_id": "sensor.thl_norovirus_pohjois_savo_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjois-Karjalan hyvinvointialue",
+                        "amount_last_week": 12,
+                        "area_id": "pohjois-karjalan_hyvinvointialue",
+                        "incidence_last_week": 20.2,
+                        "amount_two_weeks_ago": 35,
+                        "change_in_numbers": -2,
+                        "change_percentage": "-6",
+                        "incidence_two_weeks_ago": 21.5,
+                        "entity_id": "sensor.thl_norovirus_pohjois_karjala",
+                        "incidence_entity_id": "sensor.thl_norovirus_pohjois_karjala_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Keski-Suomen hyvinvointialue",
+                        "amount_last_week": 23,
+                        "area_id": "keski-suomen_hyvinvointialue",
+                        "incidence_last_week": 28.7,
+                        "amount_two_weeks_ago": 59,
+                        "change_in_numbers": 20,
+                        "change_percentage": "34",
+                        "incidence_two_weeks_ago": 21.5,
+                        "entity_id": "sensor.thl_norovirus_keski_suomi",
+                        "incidence_entity_id": "sensor.thl_norovirus_keski_suomi_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Etelä-Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 32,
+                        "area_id": "etela-pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 55.3,
+                        "amount_two_weeks_ago": 66,
+                        "change_in_numbers": 39,
+                        "change_percentage": "59",
+                        "incidence_two_weeks_ago": 34.7,
+                        "entity_id": "sensor.thl_norovirus_etela_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_etela_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 22,
+                        "area_id": "pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 45.8,
+                        "amount_two_weeks_ago": 54,
+                        "change_in_numbers": 27,
+                        "change_percentage": "50",
+                        "incidence_two_weeks_ago": 30.5,
+                        "entity_id": "sensor.thl_norovirus_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Keski-Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 12,
+                        "area_id": "keski-pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 61.8,
+                        "amount_two_weeks_ago": 25,
+                        "change_in_numbers": 17,
+                        "change_percentage": "68",
+                        "incidence_two_weeks_ago": 36.8,
+                        "entity_id": "sensor.thl_norovirus_keski_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_keski_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Pohjois-Pohjanmaan hyvinvointialue",
+                        "amount_last_week": 32,
+                        "area_id": "pohjois-pohjanmaan_hyvinvointialue",
+                        "incidence_last_week": 25.1,
+                        "amount_two_weeks_ago": 95,
+                        "change_in_numbers": 10,
+                        "change_percentage": "11",
+                        "incidence_two_weeks_ago": 22.7,
+                        "entity_id": "sensor.thl_norovirus_pohjois_pohjanmaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_pohjois_pohjanmaa_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Kainuun hyvinvointialue",
+                        "amount_last_week": 0,
+                        "area_id": "kainuun_hyvinvointialue",
+                        "incidence_last_week": 7.0,
+                        "amount_two_weeks_ago": 8,
+                        "change_in_numbers": -3,
+                        "change_percentage": "-38",
+                        "incidence_two_weeks_ago": 11.3,
+                        "entity_id": "sensor.thl_norovirus_kainuu",
+                        "incidence_entity_id": "sensor.thl_norovirus_kainuu_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Lapin hyvinvointialue",
+                        "amount_last_week": 7,
+                        "area_id": "lapin_hyvinvointialue",
+                        "incidence_last_week": 13.1,
+                        "amount_two_weeks_ago": 33,
+                        "change_in_numbers": -10,
+                        "change_percentage": "-30",
+                        "incidence_two_weeks_ago": 18.8,
+                        "entity_id": "sensor.thl_norovirus_lappi",
+                        "incidence_entity_id": "sensor.thl_norovirus_lappi_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Helsingin kaupunki",
+                        "amount_last_week": 61,
+                        "area_id": "helsingin_kaupunki",
+                        "incidence_last_week": 27.6,
+                        "amount_two_weeks_ago": 169,
+                        "change_in_numbers": 17,
+                        "change_percentage": "10",
+                        "incidence_two_weeks_ago": 25.0,
+                        "entity_id": "sensor.thl_norovirus_helsinki",
+                        "incidence_entity_id": "sensor.thl_norovirus_helsinki_ilmaantuvuus"
+                    },
+                    {
+                        "name": "Ahvenanmaa",
+                        "amount_last_week": 0,
+                        "area_id": "ahvenanmaa",
+                        "incidence_last_week": 0.0,
+                        "amount_two_weeks_ago": 0,
+                        "change_in_numbers": 0,
+                        "change_percentage": 0,
+                        "incidence_two_weeks_ago": 0.0,
+                        "entity_id": "sensor.thl_norovirus_ahvenanmaa",
+                        "incidence_entity_id": "sensor.thl_norovirus_ahvenanmaa_ilmaantuvuus"
+                    }
+                ],
+                "disease_id": "877835",
+                "disease_name": "Norovirus",
+                "icon": "mdi:virus",
+                "attribution": "Data provided by Finnish Institute for Health and Welfare (THL)",
+                "friendly_name": "THL Norovirus Tila"
+            }
+        }
+    },
+    "statistics": {
+        "sensor.thl_influenssa_ilmaantuvuus": {
+            "unit": "per 100 000",
+            "mean": [
+                ["2026-08-11T08:00:00+00:00", 0.9],
+                ["2026-08-18T08:00:00+00:00", 1.0],
+                ["2026-08-25T08:00:00+00:00", 1.1],
+                ["2026-09-01T08:00:00+00:00", 1.0],
+                ["2026-09-08T08:00:00+00:00", 1.1],
+                ["2026-09-15T08:00:00+00:00", 1.3],
+                ["2026-09-22T08:00:00+00:00", 1.4],
+                ["2026-09-29T08:00:00+00:00", 1.8],
+                ["2026-10-06T08:00:00+00:00", 2.2],
+                ["2026-10-13T08:00:00+00:00", 2.7],
+                ["2026-10-20T08:00:00+00:00", 2.8],
+                ["2026-10-27T08:00:00+00:00", 3.5],
+                ["2026-11-03T08:00:00+00:00", 3.9],
+                ["2026-11-10T08:00:00+00:00", 5.4],
+                ["2026-11-17T08:00:00+00:00", 6.2],
+                ["2026-11-24T08:00:00+00:00", 6.3],
+                ["2026-12-01T08:00:00+00:00", 8.8],
+                ["2026-12-08T08:00:00+00:00", 10.1],
+                ["2026-12-15T08:00:00+00:00", 10.9],
+                ["2026-12-22T08:00:00+00:00", 12.3],
+                ["2026-12-29T08:00:00+00:00", 12.6],
+                ["2027-01-05T08:00:00+00:00", 13.8],
+                ["2027-01-12T08:00:00+00:00", 17.2],
+                ["2027-01-19T08:00:00+00:00", 17.4],
+                ["2027-01-26T08:00:00+00:00", 19.9],
+                ["2027-02-02T08:00:00+00:00", 23.5],
+                ["2027-02-09T08:00:00+00:00", 26.9]
+            ]
+        },
+        "sensor.thl_influenssa_pirkanmaa": {
+            "unit": null,
+            "mean": [
+                ["2026-02-03T08:00:00+00:00", 131],
+                ["2026-08-11T08:00:00+00:00", 5],
+                ["2026-08-18T08:00:00+00:00", 5],
+                ["2026-08-25T08:00:00+00:00", 6],
+                ["2026-09-01T08:00:00+00:00", 6],
+                ["2026-09-08T08:00:00+00:00", 7],
+                ["2026-09-15T08:00:00+00:00", 8],
+                ["2026-09-22T08:00:00+00:00", 9],
+                ["2026-09-29T08:00:00+00:00", 11],
+                ["2026-10-06T08:00:00+00:00", 13],
+                ["2026-10-13T08:00:00+00:00", 15],
+                ["2026-10-20T08:00:00+00:00", 17],
+                ["2026-10-27T08:00:00+00:00", 24],
+                ["2026-11-03T08:00:00+00:00", 28],
+                ["2026-11-10T08:00:00+00:00", 32],
+                ["2026-11-17T08:00:00+00:00", 37],
+                ["2026-11-24T08:00:00+00:00", 40],
+                ["2026-12-01T08:00:00+00:00", 46],
+                ["2026-12-08T08:00:00+00:00", 53],
+                ["2026-12-15T08:00:00+00:00", 58],
+                ["2026-12-22T08:00:00+00:00", 76],
+                ["2026-12-29T08:00:00+00:00", 80],
+                ["2027-01-05T08:00:00+00:00", 98],
+                ["2027-01-12T08:00:00+00:00", 100],
+                ["2027-01-19T08:00:00+00:00", 125],
+                ["2027-01-26T08:00:00+00:00", 136],
+                ["2027-02-02T08:00:00+00:00", 141],
+                ["2027-02-09T08:00:00+00:00", 205]
+            ]
+        },
+        "sensor.thl_influenssa": {
+            "unit": null,
+            "mean": [["2026-02-03T08:00:00+00:00", 1184]]
+        }
+    },
+    "shots": [
+        {
+            "name": "country",
+            "width": 483,
+            "card": {
+                "type": "custom:thl-card",
+                "entity": "sensor.thl_influenssa"
+            }
+        },
+        {
+            "name": "county",
+            "width": 483,
+            "card": {
+                "type": "custom:thl-card",
+                "entity": ["sensor.thl_influenssa", "sensor.thl_norovirus"],
+                "color_by": "change",
+                "default_area": "pirkanmaan_hyvinvointialue"
+            }
+        },
+        {
+            "name": "narrow",
+            "width": 245,
+            "card": {
+                "type": "custom:thl-card",
+                "entity": "sensor.thl_influenssa"
+            }
+        }
+    ]
+}

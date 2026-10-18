@@ -1,4 +1,5 @@
-// Lifted from the inline SVG of the card's 1.x source (see the git history) — not written by hand.
+// Adapted from "Hyvinvointialueet.svg" by Fenn-O-maniC on Wikimedia Commons, CC BY-SA 4.0 (see LICENSE-map), through the
+// inline SVG of the card's 1.x source. Not written by hand.
 // The shapes are the wellbeing services counties of Finland, keyed by the area_id the thl integration uses.
 
 export interface CountyShape {

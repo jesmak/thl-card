@@ -58,12 +58,13 @@ beforeEach(() => {
 });
 
 describe("the visual editor", () => {
-    it("asks for a whole country sensor of the thl integration", async () => {
+    it("asks for one or several whole country sensors of the thl integration", async () => {
         const [entity] = form(await editor()).schema;
         expect(entity.name).toBe("entity");
         expect(entity.required).toBe(true);
         expect(entity.selector).toEqual({
             entity: {
+                multiple: true,
                 domain: "sensor",
                 integration: "thl",
                 include_entities: ["sensor.thl_influenssa", "sensor.thl_influenssankaltaiset_kaynnit"],
@@ -75,9 +76,9 @@ describe("the visual editor", () => {
         expect(cardEntities(hass)).not.toContain("sensor.thl_influenssa_lappi");
     });
 
-    it("offers the colours, the trend and a width for the map", async () => {
+    it("offers the colours, the trend, the inset, the key and a width for the map", async () => {
         const names = form(await editor()).schema.map((entry) => entry.name);
-        expect(names).toEqual(["entity", "color_by", "default_area", "show_trend", "map_width"]);
+        expect(names).toEqual(["entity", "color_by", "default_area", "show_trend", "show_inset", "show_key", "map_width"]);
     });
 
     it("offers the counties of the chosen sensor as the default, after the whole country", async () => {
@@ -102,7 +103,7 @@ describe("the visual editor", () => {
     });
 
     it("shows the defaults it leaves out of the configuration", async () => {
-        expect(form(await editor()).data).toMatchObject({ color_by: "level", show_trend: true });
+        expect(form(await editor()).data).toMatchObject({ color_by: "level", show_trend: true, show_inset: true, show_key: true });
     });
 
     it("keeps the defaults out of what it passes on", async () => {
@@ -134,15 +135,42 @@ describe("the visual editor", () => {
 
     it("shows the configuration it was given", async () => {
         expect(form(await editor({ map_width: 300 })).data).toMatchObject({
-            entity: "sensor.thl_influenssa",
+            entity: ["sensor.thl_influenssa"],
             map_width: 300,
         });
+    });
+
+    it("keeps one sensor a plain entity, and several a list", async () => {
+        const changed = async (config: Partial<ThlCardConfig>, entity: string[]) => {
+            const element = await editor(config);
+            const changes: ThlCardConfig[] = [];
+            element.addEventListener("config-changed", (event) =>
+                changes.push((event as CustomEvent<{ config: ThlCardConfig }>).detail.config),
+            );
+            form(element).dispatchEvent(new CustomEvent("value-changed", { detail: { value: { type: "custom:thl-card", entity } } }));
+            return changes[0].entity;
+        };
+        expect(await changed({}, ["sensor.thl_influenssa"])).toBe("sensor.thl_influenssa");
+        expect(await changed({}, ["sensor.thl_influenssa", "sensor.thl_norovirus"])).toEqual([
+            "sensor.thl_influenssa",
+            "sensor.thl_norovirus",
+        ]);
+        // A list the user wrote stays a list, even of one.
+        expect(await changed({ entity: ["sensor.thl_influenssa", "sensor.thl_norovirus"] }, ["sensor.thl_influenssa"])).toEqual([
+            "sensor.thl_influenssa",
+        ]);
+    });
+
+    it("offers the counties of the first sensor when there are several", async () => {
+        const element = await editor({ entity: ["sensor.thl_influenssa", "sensor.thl_influenssankaltaiset_kaynnit"] });
+        const entry = form(element).schema.find((field) => field.name === "default_area");
+        expect((entry?.selector as { select: { options: unknown[] } }).select.options).toHaveLength(3);
     });
 
     it("names the fields in the viewer’s language", async () => {
         const element = await editor();
         const compute = (form(element) as unknown as { computeLabel(entry: { name: string }): string }).computeLabel;
-        expect(compute({ name: "entity" })).toBe("Tauti tai influenssankaltaiset käynnit");
+        expect(compute({ name: "entity" })).toBe("Taudit tai influenssankaltaiset käynnit");
         expect(compute({ name: "color_by" })).toBe("Värit");
         expect(compute({ name: "map_width" })).toBe("Kartan leveys");
     });

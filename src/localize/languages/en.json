@@ -8,8 +8,8 @@
     "last_week": "Last week",
     "two_weeks_ago": "Two weeks ago",
     "change": "Change",
-    "entity": "Disease or flu-like illness visits",
-    "entity_helper": "The whole country's sensor of a disease, or of the flu-like illness visits, from the thl integration.",
+    "entity": "Diseases or flu-like illness visits",
+    "entity_helper": "The whole country's sensor of a disease, or of the flu-like illness visits, provided by the thl integration. If you add several to the card, you can switch between them with the buttons at the top of the card.",
     "map_width": "Map width",
     "map_width_helper": "Leave empty and the map follows the width of the card.",
     "incidence": "Incidence",
@@ -25,5 +25,14 @@
     "trend_caption": "{weeks} weeks",
     "week_short": "Wk",
     "default_area": "Default county",
-    "default_area_helper": "Chosen whenever the card loads. Clicking it again shows the whole country."
+    "default_area_helper": "Chosen whenever the card loads. Clicking it again shows the whole country.",
+    "last_year": "A year ago",
+    "capital_region": "Capital region",
+    "key_level": "incidence compared with the whole country",
+    "key_share": "share of visits compared with the whole country",
+    "key_change": "change from the week before",
+    "show_inset": "Capital region inset",
+    "show_inset_helper": "The capital region drawn again larger beside the figures, so its small counties are easier to choose.",
+    "show_key": "Colour key",
+    "show_key_helper": "What the map's colours mean, under the map."
 }

@@ -8,8 +8,8 @@
     "last_week": "Viime viikko",
     "two_weeks_ago": "Toissa viikko",
     "change": "Muutos",
-    "entity": "Tauti tai influenssankaltaiset käynnit",
-    "entity_helper": "thl-integraation taudin tai influenssankaltaisten käyntien koko maan sensori.",
+    "entity": "Taudit tai influenssankaltaiset käynnit",
+    "entity_helper": "thl-integraation tarjoama taudin tai influenssankaltaisten käyntien koko maan sensori. Jos kortille on lisätty useampia, voit vaihtaa niiden välillä kortin yläreunassa olevien painikkeiden avulla.",
     "map_width": "Kartan leveys",
     "map_width_helper": "Jätä tyhjäksi, niin kartta seuraa kortin leveyttä.",
     "incidence": "Ilmaantuvuus",
@@ -25,5 +25,14 @@
     "trend_caption": "{weeks} viikkoa",
     "week_short": "Vk",
     "default_area": "Oletusalue",
-    "default_area_helper": "Valitaan aina, kun kortti latautuu. Sen uudelleen napsauttaminen näyttää koko maan."
+    "default_area_helper": "Valitaan aina, kun kortti latautuu. Sen uudelleen napsauttaminen näyttää koko maan.",
+    "last_year": "Vuosi sitten",
+    "capital_region": "Pääkaupunkiseutu",
+    "key_level": "ilmaantuvuus koko maahan verrattuna",
+    "key_share": "käyntien osuus koko maahan verrattuna",
+    "key_change": "muutos edellisestä viikosta",
+    "show_inset": "Pääkaupunkiseudun suurennos",
+    "show_inset_helper": "Pääkaupunkiseutu uudelleen suurempana lukujen vieressä, jotta sen pienet alueet on helpompi valita.",
+    "show_key": "Värien selitys",
+    "show_key_helper": "Mitä kartan värit tarkoittavat, kartan alla."
 }
