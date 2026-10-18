@@ -1,7 +1,7 @@
 {
-  "name": "THL card",
-  "render_readme": true,
-  "filename": "thl-card.js",
-  "country": "FI",
-  "homeassistant": "2026.9.3"
+    "name": "THL card",
+    "render_readme": true,
+    "filename": "thl-card.js",
+    "country": "FI",
+    "homeassistant": "2026.9.3"
 }
