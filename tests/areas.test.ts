@@ -95,10 +95,18 @@ describe("colouring by change", () => {
         expect(changeColor(area({ change_percentage: undefined, share_last_week: null, share_two_weeks_ago: 0.02 }))).toBe(NO_DATA);
     });
 
-    it("writes a dash for the change when there was nothing the week before to compare with", () => {
-        expect(changeText(area({ change_percentage: 0 }))).toBe("–");
-        expect(changeText(area({ change_percentage: "0" }))).toBe("0%");
-        expect(changeText(area({ change_percentage: "-15" }))).toBe("-15%");
+    // The number 0 means there was nothing the week before, the string "0" a real reading of no change.
+    describe("the change as written", () => {
+        const finnish = (value: number) => `${new Intl.NumberFormat("fi").format(value)} %`;
+        it.each([
+            { change_percentage: 0, text: "–" },
+            { change_percentage: "0", text: "0 %" },
+            { change_percentage: "-15", text: "−15 %" },
+            { change_percentage: "1400", text: "1\u00a0400 %" },
+            { change_percentage: "not a number", text: "–" },
+        ])("is $text for $change_percentage", ({ change_percentage, text }) => {
+            expect(changeText(area({ change_percentage }), finnish)).toBe(text);
+        });
     });
 });
 

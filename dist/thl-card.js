@@ -1,4 +1,4 @@
-/*! thl-card 2.1.0 | MIT License */
+/*! thl-card 2.1.1 | MIT License */
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __decorateClass = (decorators, target, key, kind) => {
@@ -607,7 +607,7 @@ function r5(r6) {
 var o6 = (o7) => o7 ?? A;
 
 // src/const.ts
-var CARD_VERSION = "2.1.0";
+var CARD_VERSION = "2.1.1";
 var WHOLE_COUNTRY = "finland";
 
 // src/areas.ts
@@ -646,8 +646,9 @@ function changePercentage(area) {
 function nothingBefore(area) {
   return area.change_percentage === 0;
 }
-function changeText(area) {
-  return nothingBefore(area) ? "\u2013" : `${area.change_percentage}%`;
+function changeText(area, percent) {
+  const change = Number(area.change_percentage);
+  return nothingBefore(area) || !Number.isFinite(change) ? "\u2013" : percent(change);
 }
 function fillColor(area, colorBy = "level", whole) {
   return colorBy === "level" ? levelColor(area, whole) : changeColor(area);
@@ -1380,16 +1381,23 @@ var RETRY = 60 * 1e3;
 function numberLocale(hass, language) {
   switch (hass?.locale?.number_format) {
     case "comma_decimal":
-      return "en-US";
+      return ["en-US", "en"];
     case "decimal_comma":
-      return "de";
+      return ["de", "es", "it"];
     case "space_comma":
-      return "fr";
+      return ["fr", "sv", "cs"];
+    case "quote_decimal":
+      return ["de-CH"];
+    case "none":
+      return "en-US";
     case "system":
       return void 0;
     default:
       return language;
   }
+}
+function blankBeforePercent(language) {
+  return ["cs", "de", "fi", "fr", "sk", "sv"].includes(language) ? " " : "";
 }
 console.info(
   `%c  THL-CARD  
@@ -1620,7 +1628,15 @@ var ThlCard = class extends i4 {
   /** What the colours mean, under the map: each colour's bound against the whole country, or of the change. */
   key(areas) {
     const change = this.colorBy === "change";
-    const bounds = change ? ["0", "\u221240 %", "\u221210 %", "\xB110 %", "+10 %", "+40 %"] : ["0", `< ${this.number(0.5, 2)}`, `< ${this.number(0.8, 2)}`, "\u2248 1", `> ${this.number(1.25, 2)}`, "> 2"];
+    const number = (value) => this.number(value, 2);
+    const bounds = change ? [
+      number(0),
+      this.percent(-40, 2),
+      this.percent(-10, 2),
+      `\xB1${this.percent(10, 2)}`,
+      `+${this.percent(10, 2)}`,
+      `+${this.percent(40, 2)}`
+    ] : [number(0), `< ${number(0.5)}`, `< ${number(0.8)}`, `\u2248 ${number(1)}`, `> ${number(1.25)}`, `> ${number(2)}`];
     const caption = change ? "key_change" : isVisits(areas) ? "key_share" : "key_level";
     return b2`
             <div class="key">
@@ -1643,13 +1659,11 @@ var ThlCard = class extends i4 {
             <div class="stats-container">
                 <span class="stats-title">${title}</span>
                 <span class="stats">${this.text("last_week")}: ${this.number(area.amount_last_week ?? 0, 0)}</span>
-                ${area.incidence_last_week === void 0 ? A : b2`<span class="stats">
-                              ${this.text("incidence")}: <span class="unit">${this.number(area.incidence_last_week, 1)} / 100 000</span>
-                          </span>`}
+                ${area.incidence_last_week === void 0 ? A : b2`<span class="stats"
+                              >${this.text("incidence")}: <span class="unit">${this.incidence(area.incidence_last_week)}</span></span
+                          >`}
                 ${area.amount_two_weeks_ago === void 0 ? A : b2`<span class="stats">${this.text("two_weeks_ago")}: ${this.number(area.amount_two_weeks_ago, 0)}</span>`}
-                ${area.change_percentage === void 0 ? A : b2`<span class="stats">
-                              ${this.text("change")}: ${changeText(area)} (${this.number(area.change_in_numbers ?? 0, 0)})
-                          </span>`}
+                ${area.change_percentage === void 0 ? A : b2`<span class="stats">${this.text("change")}: ${this.change(area)}</span>`}
                 ${this.yearAgo === void 0 ? A : b2`<span class="stats">${this.text("last_year")}: ${this.number(this.yearAgo, 0)}</span>`}
             </div>
         `;
@@ -1659,7 +1673,7 @@ var ThlCard = class extends i4 {
     if (area === void 0) {
       return A;
     }
-    const share = (value) => value === null || value === void 0 ? "\u2013" : `${this.number(value, 3)} %`;
+    const share = (value) => value === null || value === void 0 ? "\u2013" : this.percent(value, 3);
     return b2`
             <div class="stats-container">
                 <span class="stats-title">${title}</span>
@@ -1687,6 +1701,7 @@ var ThlCard = class extends i4 {
     const digits = isVisits(this.areas()) ? 3 : 1;
     const marked = Math.min(this.hovered ?? values.length - 1, values.length - 1);
     const at = `left: ${x2(marked).toFixed(2)}%; top: ${(y3(values[marked]) / 30 * 100).toFixed(2)}%;`;
+    const bubble = `${this.text("week_short")} ${this.number(this.trend[marked].week, 0)}: ${this.number(values[marked], digits)}`;
     return b2`
             <div class="trend">
                 <div
@@ -1703,12 +1718,10 @@ var ThlCard = class extends i4 {
                         <polyline class="trend-line" points="${points}" vector-effect="non-scaling-stroke" />
                     </svg>
                     <span class="trend-dot ${this.hovered === void 0 ? "" : "hovered"}" style="${at}"></span>
-                    ${this.hovered === void 0 ? A : b2`<span class="trend-bubble" style="left: ${x2(marked).toFixed(2)}%;">
-                                  ${this.text("week_short")} ${this.trend[marked].week}: ${this.number(values[marked], digits)}
-                              </span>`}
+                    ${this.hovered === void 0 ? A : b2`<span class="trend-bubble" style="left: ${x2(marked).toFixed(2)}%;">${bubble}</span>`}
                 </div>
                 <span class="trend-caption">
-                    ${this.text("trend_caption", { weeks: String(values.length) })} · ${this.text("highest")}
+                    ${this.text("trend_caption", { weeks: this.number(values.length, 0) })} · ${this.text("highest")}
                     ${this.number(highest, digits)}
                 </span>
             </div>
@@ -1839,6 +1852,17 @@ var ThlCard = class extends i4 {
   areas() {
     const entity = this.config ? this.hass?.states[this.sensorId()] : void 0;
     return entity?.attributes.values ?? [];
+  }
+  /** Cases per 100 000 people. */
+  incidence(value) {
+    return `${this.number(value, 1)} / ${this.number(1e5, 0)}`;
+  }
+  /** The change from the week before, as a percentage and in cases. */
+  change(area) {
+    return `${changeText(area, (value) => this.percent(value, 0))} (${this.number(area.change_in_numbers ?? 0, 0)})`;
+  }
+  percent(value, digits) {
+    return `${this.number(value, digits)}${blankBeforePercent(this.language())}%`;
   }
   number(value, digits) {
     const grouping = this.hass?.locale?.number_format === "none" ? false : void 0;

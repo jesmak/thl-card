@@ -248,7 +248,7 @@ describe("the figures beside the map", () => {
         expect(whole.querySelector(".stats-title")?.textContent).toContain("Koko maa");
         expect(whole.textContent).toContain("Viime viikko: 17");
         expect(whole.textContent).toContain("Toissa viikko: 20");
-        expect(whole.textContent).toContain("-15%");
+        expect(whole.textContent).toContain("Muutos: −15 % (−3)");
     });
 
     it("name the disease", async () => {
@@ -379,20 +379,190 @@ describe("by level and with a trend", () => {
 
     it("shows the incidence with the cases", async () => {
         const root = shadow(await card(hass({ values: LEVELS })));
-        expect(root.querySelector(".stats-container")?.textContent).toContain("Ilmaantuvuus: 0,3 / 100 000");
+        expect(root.querySelector(".stats-container")?.textContent).toContain("Ilmaantuvuus: 0,3 / 100\u00a0000");
     });
 
-    it("writes numbers in the format the user chose in Home Assistant", async () => {
-        const values = [{ ...LEVELS[0], incidence_last_week: 1234.5 }];
-        const figures = async (number_format: string) => {
-            const state = { ...hass({ values }), locale: { language: "fi", number_format } };
-            return shadow(await card(state))
-                .querySelector(".stats-container")
-                ?.textContent?.replace(/\s+/g, " ");
-        };
-        expect(await figures("language")).toContain("Ilmaantuvuus: 1 234,5 / 100 000");
-        expect(await figures("comma_decimal")).toContain("Ilmaantuvuus: 1,234.5 / 100 000");
-        expect(await figures("none")).toContain("Ilmaantuvuus: 1234,5 / 100 000");
+    // Home Assistant's number format setting wins over the language, as its own frontend reads it, for every number the
+    // card writes: the figures, the change and both legends. Hindi groups unlike every locale a setting maps to, and
+    // unlike the test runners' own, so each row can fail on its own. Persian has digits of its own. The space before a
+    // percent sign is the language's, as the frontend's blankBeforePercent has it: Finnish has one, Hindi and Persian don't.
+    describe("the number format setting", () => {
+        // The minus sign and the bidirectional marks are the locale's own business, not the setting's.
+        const plain = (text: string) =>
+            text
+                .replace(/[\s\u00a0\u202f]+/g, " ")
+                .replace(/\u2019/g, "'")
+                .replace(/\u2212/g, "-")
+                .replace(/[\u200e\u200f\u061c]/g, "")
+                .trim();
+        const system = (value: number, digits: number) => new Intl.NumberFormat(undefined, { maximumFractionDigits: digits }).format(value);
+        const DOTS = { level: "0 < 0.5 < 0.8 ≈ 1 > 1.25 > 2", change_key: "0 -40% -10% ±10% +10% +40%" };
+        const COMMAS = { level: "0 < 0,5 < 0,8 ≈ 1 > 1,25 > 2", change_key: DOTS.change_key };
+        const SPACED = "0 -40 % -10 % ±10 % +10 % +40 %";
+        it.each([
+            {
+                language: "hi",
+                number_format: "language",
+                incidence: "12,34,567.5 / 1,00,000",
+                change: "-12,34,567%",
+                cases: "12,34,567",
+                ...DOTS,
+            },
+            {
+                language: "hi",
+                number_format: "comma_decimal",
+                incidence: "1,234,567.5 / 100,000",
+                change: "-1,234,567%",
+                cases: "1,234,567",
+                ...DOTS,
+            },
+            {
+                language: "hi",
+                number_format: "decimal_comma",
+                incidence: "1.234.567,5 / 100.000",
+                change: "-1.234.567%",
+                cases: "1.234.567",
+                ...COMMAS,
+            },
+            {
+                language: "hi",
+                number_format: "space_comma",
+                incidence: "1 234 567,5 / 100 000",
+                change: "-1 234 567%",
+                cases: "1 234 567",
+                ...COMMAS,
+            },
+            {
+                language: "hi",
+                number_format: "quote_decimal",
+                incidence: "1'234'567.5 / 100'000",
+                change: "-1'234'567%",
+                cases: "1'234'567",
+                ...DOTS,
+            },
+            { language: "hi", number_format: "none", incidence: "1234567.5 / 100000", change: "-1234567%", cases: "1234567", ...DOTS },
+            // None is en-US without grouping, not the language without it, so a Finnish interface gets a decimal point.
+            {
+                language: "fi",
+                number_format: "none",
+                incidence: "1234567.5 / 100000",
+                change: "-1234567 %",
+                cases: "1234567",
+                ...DOTS,
+                change_key: SPACED,
+            },
+            {
+                language: "fi",
+                number_format: "language",
+                incidence: "1 234 567,5 / 100 000",
+                change: "-1 234 567 %",
+                cases: "1 234 567",
+                ...COMMAS,
+                change_key: SPACED,
+            },
+            // Persian digits go when the setting names a locale, and Finnish unset is the UI language.
+            {
+                language: "fa",
+                number_format: "comma_decimal",
+                incidence: "1,234,567.5 / 100,000",
+                change: "-1,234,567%",
+                cases: "1,234,567",
+                ...DOTS,
+            },
+            {
+                language: "fi",
+                number_format: undefined,
+                incidence: "1 234 567,5 / 100 000",
+                change: "-1 234 567 %",
+                cases: "1 234 567",
+                ...COMMAS,
+                change_key: SPACED,
+            },
+            {
+                language: "fa",
+                number_format: "language",
+                incidence: "۱٬۲۳۴٬۵۶۷٫۵ / ۱۰۰٬۰۰۰",
+                change: "-۱٬۲۳۴٬۵۶۷%",
+                cases: "۱٬۲۳۴٬۵۶۷",
+                level: "۰ < ۰٫۵ < ۰٫۸ ≈ ۱ > ۱٫۲۵ > ۲",
+                change_key: "۰ -۴۰% -۱۰% ±۱۰% +۱۰% +۴۰%",
+            },
+            {
+                language: "hi",
+                number_format: "system",
+                incidence: `${system(1234567.5, 1)} / ${system(100000, 0)}`,
+                change: `${system(-1234567, 0)}%`,
+                cases: system(1234567, 0),
+                level: [
+                    system(0, 2),
+                    `< ${system(0.5, 2)}`,
+                    `< ${system(0.8, 2)}`,
+                    `≈ ${system(1, 0)}`,
+                    `> ${system(1.25, 2)}`,
+                    `> ${system(2, 0)}`,
+                ].join(" "),
+                change_key: `${system(0, 0)} -${system(40, 0)}% -${system(10, 0)}% ±${system(10, 0)}% +${system(10, 0)}% +${system(40, 0)}%`,
+            },
+        ])(
+            "writes every number in the format $number_format in the language $language",
+            async ({ language, number_format, incidence, change, cases, level, change_key }) => {
+                const values = [
+                    {
+                        ...LEVELS[0],
+                        amount_last_week: 1234567,
+                        incidence_last_week: 1234567.5,
+                        change_percentage: "-1234567",
+                        change_in_numbers: -1234567,
+                    },
+                    { ...LEVELS[1], amount_last_week: 1234567 },
+                ];
+                const state = { ...hass({ values }), locale: { language, number_format } };
+                const bounds = (root: ShadowRoot) =>
+                    plain([...root.querySelectorAll(".key .bounds span")].map((span) => span.textContent).join(" "));
+                const byLevel = shadow(await card(state));
+                const figures = plain(byLevel.querySelector(".stats-container")?.textContent ?? "");
+                // Last week's cases are the only figure followed by a space: the incidence goes on with its decimals.
+                expect(figures).toContain(`: ${plain(cases)} `);
+                expect(figures).toContain(plain(incidence));
+                expect(figures).toContain(`: ${plain(change)} (-${plain(cases)})`);
+                expect([...byLevel.querySelectorAll(".amount")].map((label) => plain(label.textContent ?? ""))).toContain(plain(cases));
+                expect(bounds(byLevel)).toBe(plain(level));
+                document.body.innerHTML = "";
+                const byChange = shadow(await card(state, { entity: ENTITY, color_by: "change" }));
+                expect(bounds(byChange)).toBe(plain(change_key));
+            },
+        );
+
+        // The trend's week numbers and its count of weeks are numbers too.
+        it.each([
+            { language: "fi", number_format: undefined, caption: "4 viikkoa", bubble: "Vk 35: 1" },
+            { language: "fa", number_format: "language", caption: "۴ weeks", bubble: "Wk ۳۵: ۱" },
+            { language: "fa", number_format: "comma_decimal", caption: "4 weeks", bubble: "Wk 35: 1" },
+        ])(
+            "writes the trend's weeks in the format $number_format in the language $language",
+            async ({ language, number_format, caption, bubble }) => {
+                const { state } = withTrend();
+                const element = await card({ ...state, locale: { language, number_format } });
+                await settled(element);
+                const root = shadow(element);
+                expect(plain(root.querySelector(".trend-caption")?.textContent ?? "")).toContain(caption);
+                const plot = root.querySelector(".trend-plot") as HTMLElement;
+                plot.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 40 }) as DOMRect;
+                plot.dispatchEvent(new PointerEvent("pointermove", { clientX: 49 }));
+                await element.updateComplete;
+                expect(plain(root.querySelector(".trend-bubble")?.textContent ?? "")).toBe(bubble);
+            },
+        );
+
+        // The system row's text can't fail on a runner whose own locale is the one a mistake would pick, so the locale is
+        // checked too: the system setting leaves it to the browser.
+        it("leaves the locale to the browser with the system setting", async () => {
+            const formats = vi.spyOn(Intl, "NumberFormat");
+            await card({ ...hass({ values: LEVELS }), locale: { language: "hi", number_format: "system" } });
+            expect(formats).toHaveBeenCalled();
+            expect(formats.mock.calls.map(([locales]) => locales)).toEqual(formats.mock.calls.map(() => undefined));
+            formats.mockRestore();
+        });
     });
 
     it("follows a change of language without waiting for the sensor", async () => {
@@ -400,7 +570,7 @@ describe("by level and with a trend", () => {
         const element = await card(state);
         element.hass = { ...state, locale: { language: "en" } };
         await element.updateComplete;
-        expect(shadow(element).querySelector(".stats-container")?.textContent).toContain("Incidence: 0.3 / 100 000");
+        expect(shadow(element).querySelector(".stats-container")?.textContent).toContain("Incidence: 0.3 / 100,000");
     });
 
     it("draws the trend of the whole country’s incidence, then of the chosen county", async () => {
@@ -579,6 +749,35 @@ describe("the flu-like illness visits", () => {
             },
         };
     }
+
+    // The space before a percent sign is the language's, as the frontend's blankBeforePercent has it: only cs, de, fi, fr,
+    // sk and sv have one, by their exact code, so Swiss German has none.
+    describe("the percent sign of a share", () => {
+        it.each([
+            { language: "fi", last: "Viime viikko: 0,5 %", before: "Toissa viikko: 0,25 %" },
+            { language: "sv", last: "Last week: 0,5 %", before: "Two weeks ago: 0,25 %" },
+            { language: "de", last: "Last week: 0,5 %", before: "Two weeks ago: 0,25 %" },
+            { language: "cs", last: "Last week: 0,5 %", before: "Two weeks ago: 0,25 %" },
+            { language: "fr", last: "Last week: 0,5 %", before: "Two weeks ago: 0,25 %" },
+            { language: "sk", last: "Last week: 0,5 %", before: "Two weeks ago: 0,25 %" },
+            // A language with its region isn't one of the codes, so Finnish in Finland has none, as in the frontend.
+            { language: "fi-FI", last: "Viime viikko: 0,5%", before: "Toissa viikko: 0,25%" },
+            { language: "en", last: "Last week: 0.5%", before: "Two weeks ago: 0.25%" },
+            { language: "hi", last: "Last week: 0.5%", before: "Two weeks ago: 0.25%" },
+            { language: "de-CH", last: "Last week: 0.5%", before: "Two weeks ago: 0.25%" },
+        ])("is written $last in the language $language", async ({ language, last, before }) => {
+            const state = { ...visits(), locale: { language } };
+            const sensor = state.states["sensor.thl_influenssankaltaiset_kaynnit"]!;
+            sensor.attributes = {
+                ...sensor.attributes,
+                values: [{ ...VISITS[0], share_last_week: 0.5, share_two_weeks_ago: 0.25 }, VISITS[1]],
+            };
+            const root = shadow(await card(state, { entity: "sensor.thl_influenssankaltaiset_kaynnit" }));
+            const figures = (root.querySelector(".stats-container")?.textContent ?? "").replace(/[\s\u00a0]+/g, " ");
+            expect(figures).toContain(last);
+            expect(figures).toContain(before);
+        });
+    });
 
     it("are named after their sensor", async () => {
         const root = shadow(await card(visits(), { entity: "sensor.thl_influenssankaltaiset_kaynnit" }));

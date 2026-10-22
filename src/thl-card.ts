@@ -44,20 +44,32 @@ const [FRAME_X, FRAME_Y, FRAME_WIDTH, FRAME_HEIGHT] = INSET_VIEW_BOX.split(" ").
 /** A trend that couldn't be fetched, such as while the websocket reconnects, is tried again after this long. */
 const RETRY = 60 * 1000;
 
-/** The locale Home Assistant's number format setting asks for, as its own frontend reads it. */
-function numberLocale(hass: HomeAssistant | undefined, language: string): string | undefined {
+/**
+ * The locales Home Assistant's number format setting asks for, as its own frontend reads it: `numberFormatToLocale`, except
+ * none, which `formatNumberToParts` writes in en-US without grouping.
+ */
+function numberLocale(hass: HomeAssistant | undefined, language: string): string | string[] | undefined {
     switch (hass?.locale?.number_format) {
         case "comma_decimal":
-            return "en-US";
+            return ["en-US", "en"];
         case "decimal_comma":
-            return "de";
+            return ["de", "es", "it"];
         case "space_comma":
-            return "fr";
+            return ["fr", "sv", "cs"];
+        case "quote_decimal":
+            return ["de-CH"];
+        case "none":
+            return "en-US";
         case "system":
             return undefined;
         default:
             return language;
     }
+}
+
+/** The space before a percent sign, in the languages that have one, as the frontend's `blankBeforePercent` has it. */
+function blankBeforePercent(language: string): string {
+    return ["cs", "de", "fi", "fr", "sk", "sv"].includes(language) ? " " : "";
 }
 
 console.info(
@@ -350,9 +362,17 @@ export class ThlCard extends LitElement {
     /** What the colours mean, under the map: each colour's bound against the whole country, or of the change. */
     private key(areas: Area[]): TemplateResult {
         const change = this.colorBy === "change";
+        const number = (value: number) => this.number(value, 2);
         const bounds = change
-            ? ["0", "−40 %", "−10 %", "±10 %", "+10 %", "+40 %"]
-            : ["0", `< ${this.number(0.5, 2)}`, `< ${this.number(0.8, 2)}`, "≈ 1", `> ${this.number(1.25, 2)}`, "> 2"];
+            ? [
+                  number(0),
+                  this.percent(-40, 2),
+                  this.percent(-10, 2),
+                  `±${this.percent(10, 2)}`,
+                  `+${this.percent(10, 2)}`,
+                  `+${this.percent(40, 2)}`,
+              ]
+            : [number(0), `< ${number(0.5)}`, `< ${number(0.8)}`, `≈ ${number(1)}`, `> ${number(1.25)}`, `> ${number(2)}`];
         const caption = change ? "key_change" : isVisits(areas) ? "key_share" : "key_level";
         return html`
             <div class="key">
@@ -380,9 +400,9 @@ export class ThlCard extends LitElement {
                 ${
                     area.incidence_last_week === undefined
                         ? nothing
-                        : html`<span class="stats">
-                              ${this.text("incidence")}: <span class="unit">${this.number(area.incidence_last_week, 1)} / 100 000</span>
-                          </span>`
+                        : html`<span class="stats"
+                              >${this.text("incidence")}: <span class="unit">${this.incidence(area.incidence_last_week)}</span></span
+                          >`
                 }
                 ${
                     area.amount_two_weeks_ago === undefined
@@ -392,9 +412,7 @@ export class ThlCard extends LitElement {
                 ${
                     area.change_percentage === undefined
                         ? nothing
-                        : html`<span class="stats">
-                              ${this.text("change")}: ${changeText(area)} (${this.number(area.change_in_numbers ?? 0, 0)})
-                          </span>`
+                        : html`<span class="stats">${this.text("change")}: ${this.change(area)}</span>`
                 }
                 ${this.yearAgo === undefined ? nothing : html`<span class="stats">${this.text("last_year")}: ${this.number(this.yearAgo, 0)}</span>`}
             </div>
@@ -406,7 +424,7 @@ export class ThlCard extends LitElement {
         if (area === undefined) {
             return nothing;
         }
-        const share = (value: number | null | undefined) => (value === null || value === undefined ? "–" : `${this.number(value, 3)} %`);
+        const share = (value: number | null | undefined) => (value === null || value === undefined ? "–" : this.percent(value, 3));
         return html`
             <div class="stats-container">
                 <span class="stats-title">${title}</span>
@@ -445,6 +463,7 @@ export class ThlCard extends LitElement {
         const marked = Math.min(this.hovered ?? values.length - 1, values.length - 1);
         // The dot and the bubble sit over the drawing, so the stretched line doesn't stretch them.
         const at = `left: ${x(marked).toFixed(2)}%; top: ${((y(values[marked]) / 30) * 100).toFixed(2)}%;`;
+        const bubble = `${this.text("week_short")} ${this.number(this.trend[marked].week, 0)}: ${this.number(values[marked], digits)}`;
 
         return html`
             <div class="trend">
@@ -465,13 +484,11 @@ export class ThlCard extends LitElement {
                     ${
                         this.hovered === undefined
                             ? nothing
-                            : html`<span class="trend-bubble" style="left: ${x(marked).toFixed(2)}%;">
-                                  ${this.text("week_short")} ${this.trend[marked].week}: ${this.number(values[marked], digits)}
-                              </span>`
+                            : html`<span class="trend-bubble" style="left: ${x(marked).toFixed(2)}%;">${bubble}</span>`
                     }
                 </div>
                 <span class="trend-caption">
-                    ${this.text("trend_caption", { weeks: String(values.length) })} · ${this.text("highest")}
+                    ${this.text("trend_caption", { weeks: this.number(values.length, 0) })} · ${this.text("highest")}
                     ${this.number(highest, digits)}
                 </span>
             </div>
@@ -614,6 +631,20 @@ export class ThlCard extends LitElement {
     private areas(): Area[] {
         const entity = this.config ? this.hass?.states[this.sensorId()] : undefined;
         return (entity?.attributes.values as Area[] | undefined) ?? [];
+    }
+
+    /** Cases per 100 000 people. */
+    private incidence(value: number): string {
+        return `${this.number(value, 1)} / ${this.number(100000, 0)}`;
+    }
+
+    /** The change from the week before, as a percentage and in cases. */
+    private change(area: Area): string {
+        return `${changeText(area, (value) => this.percent(value, 0))} (${this.number(area.change_in_numbers ?? 0, 0)})`;
+    }
+
+    private percent(value: number, digits: number): string {
+        return `${this.number(value, digits)}${blankBeforePercent(this.language())}%`;
     }
 
     private number(value: number, digits: number): string {

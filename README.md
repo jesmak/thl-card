@@ -70,7 +70,7 @@ point at as they are small.
 
 ### The colours
 
-By default a county is coloured by its level compared with the whole country. The level is its incidence per 100 000
+By default a county is coloured by its level compared with the whole country. The level is its incidence per 100,000
 people for a disease, or its share of flu-like illness visits. The level is what makes counties comparable, since a large county
 has more cases simply because more people live there.
 
@@ -89,11 +89,11 @@ flu-like illness visits, how their share changed:
 | Colour      | What it means                                        |
 | ----------- | ---------------------------------------------------- |
 | Blue        | No cases at all, this week or the week before        |
-| Green       | Cases fell by more than 40 %                         |
-| Light green | Cases fell by more than 10 %                         |
+| Green       | Cases fell by more than 40%                          |
+| Light green | Cases fell by more than 10%                          |
 | Yellow      | Little change either way, or no week to compare with |
-| Orange      | Cases rose by more than 10 %                         |
-| Red         | Cases rose by more than 40 %                         |
+| Orange      | Cases rose by more than 10%                          |
+| Red         | Cases rose by more than 40%                          |
 
 The key under the map gives the same bounds. A county the sensor carries no numbers for is left the colour of the
 text.

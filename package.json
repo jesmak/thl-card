@@ -1,6 +1,6 @@
 {
     "name": "thl-card",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "description": "Home Assistant dashboard card that draws THL's weekly disease numbers on a map of Finland",
     "keywords": [
         "home-assistant",

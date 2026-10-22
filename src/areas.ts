@@ -54,9 +54,10 @@ function nothingBefore(area: Area): boolean {
     return area.change_percentage === 0;
 }
 
-/** The change as written under the map: a dash when there was nothing the week before to compare with. */
-export function changeText(area: Area): string {
-    return nothingBefore(area) ? "–" : `${area.change_percentage}%`;
+/** The change as written under the map, as `percent` writes it: a dash when there was nothing the week before to compare with. */
+export function changeText(area: Area, percent: (value: number) => string): string {
+    const change = Number(area.change_percentage);
+    return nothingBefore(area) || !Number.isFinite(change) ? "–" : percent(change);
 }
 
 /** How a county is coloured, by level unless asked otherwise. */
